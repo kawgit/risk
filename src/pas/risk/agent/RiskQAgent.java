@@ -60,8 +60,12 @@ import pas.risk.senses.MyStateSensorArray;
 public class RiskQAgent
         extends NeuralQAgent {
 
+    private final double EPSILON = 0.3;
+    private Random rng;
+
     public RiskQAgent(int agentId) {
         super(agentId);
+        this.rng = new Random();
     }
 
     /**
@@ -184,16 +188,15 @@ public class RiskQAgent
         return new MyPlacementRewardFunction(this.agentId());
     }
 
-    public static <T> T chooseRandom(final List<T> list,
-            final Random random) {
-        return list.get(random.nextInt(list.size()));
+    public <T> T chooseRandom(final List<T> list) {
+        return list.get(this.rng.nextInt(list.size()));
     }
 
-    public static <T> T chooseRandomWithLogits(final List<T> list, final double[] logits) {
-        return chooseRandomWithLogits(list, logits, 5);
+    public <T> T chooseRandomWithLogits(final List<T> list, final double[] logits) {
+        return chooseRandomWithLogits(list, logits, 1);
     }
 
-    public static <T> T chooseRandomWithLogits(final List<T> list, final double[] logits, final double temperature) {
+    public <T> T chooseRandomWithLogits(final List<T> list, final double[] logits, final double temperature) {
         if (list.size() != logits.length || logits.length == 0) {
             throw new IllegalArgumentException();
         }
@@ -216,7 +219,9 @@ public class RiskQAgent
             expLogits[i] /= sum;
         }
 
-        double threshold = new Random().nextDouble();
+        System.out.println(Arrays.toString(expLogits));
+
+        double threshold = this.rng.nextDouble();
         double cumulative = 0.0;
 
         for (int i = 0; i < expLogits.length; i++) {
@@ -275,10 +280,11 @@ public class RiskQAgent
             final boolean canRedeemCards) {
         final List<Action> options = this.getRedeemActions(game, actionCounter, canRedeemCards,
                 game.getAgentInventory(this.agentId()).size() < 5);
-        List<Matrix> features = options.stream()
-                .map(action -> this.getActionFeatureVector(game, actionCounter, action))
-                .toList();
-        return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::actionForward);
+        return this.chooseRandom(options);
+        // List<Matrix> features = options.stream()
+        //         .map(action -> this.getActionFeatureVector(game, actionCounter, action))
+        //         .toList();
+        // return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::actionForward);
     }
 
     /**
@@ -297,7 +303,7 @@ public class RiskQAgent
     public boolean shouldExploreRedeemMovePhase(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        return Math.random() < 0.8;
+        return this.rng.nextDouble() < EPSILON;
     }
 
     /**
@@ -316,10 +322,11 @@ public class RiskQAgent
             final int actionCounter,
             final boolean canRedeemCards) {
         final List<Action> options = this.getAttackRedeemActions(game, actionCounter, canRedeemCards);
-        List<Matrix> features = options.stream()
-                .map(action -> this.getActionFeatureVector(game, actionCounter, action))
-                .toList();
-        return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::actionForward);
+        return this.chooseRandom(options);
+        // List<Matrix> features = options.stream()
+        //         .map(action -> this.getActionFeatureVector(game, actionCounter, action))
+        //         .toList();
+        // return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::actionForward);
     }
 
     /**
@@ -339,7 +346,7 @@ public class RiskQAgent
     public boolean shouldExploreAttackRedeemIfForcedMovePhase(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        return Math.random() < 0.8;
+        return this.rng.nextDouble() < EPSILON;
     }
 
     /**
@@ -358,10 +365,11 @@ public class RiskQAgent
             final int actionCounter,
             final boolean canRedeemCards) {
         final List<Action> options = this.getFortifyActions(game, actionCounter, canRedeemCards);
-        List<Matrix> features = options.stream()
-                .map(action -> this.getActionFeatureVector(game, actionCounter, action))
-                .toList();
-        return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::actionForward);
+        return this.chooseRandom(options);
+        // List<Matrix> features = options.stream()
+        //         .map(action -> this.getActionFeatureVector(game, actionCounter, action))
+        //         .toList();
+        // return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::actionForward);
     }
 
     /**
@@ -380,7 +388,7 @@ public class RiskQAgent
     public boolean shouldExploreFortifySkipMovePhase(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        return Math.random() < 0.8;
+        return this.rng.nextDouble() < EPSILON;
     }
 
     /**
@@ -401,10 +409,11 @@ public class RiskQAgent
             final boolean isDuringSetup,
             final int remainingArmies) {
         final List<Territory> options = this.getPotentialPlacements(game, isDuringSetup, remainingArmies);
-        List<Matrix> features = options.stream()
-                .map(option -> this.getPlacementFeatureVector(game, remainingArmies, option))
-                .toList();
-        return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::placementForward);
+        return this.chooseRandom(options);
+        // List<Matrix> features = options.stream()
+        //         .map(option -> this.getPlacementFeatureVector(game, remainingArmies, option))
+        //         .toList();
+        // return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::placementForward);
 
     }
 
@@ -425,7 +434,7 @@ public class RiskQAgent
     public boolean shouldExplorePlacementPhase(final GameView game,
             final boolean isDuringSetup,
             final int remainingArmies) {
-        return Math.random() < 0.8;
+        return this.rng.nextDouble() < EPSILON;
     }
 
     public class HackyTerritoryRMSNorm extends Module {
