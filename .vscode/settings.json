@@ -1,0 +1,13 @@
+{
+    "java.project.sourcePaths": [
+        "src"
+    ],
+    "java.project.referencedLibraries": [
+        "lib/argparse4j-0.9.0.jar",
+        "lib/error_prone_annotations-2.27.0.jar",
+        "lib/gson-2.11.0.jar",
+        "lib/jmat-1.0.1.jar",
+        "lib/jnn-1.0.0.jar",
+        "lib/pas-risk-jar-1.2.0.jar"
+    ]
+}

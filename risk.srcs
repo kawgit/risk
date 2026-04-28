@@ -1,0 +1,11 @@
+# rewards
+src/pas/risk/rewards/MyActionRewardFunction.java
+src/pas/risk/rewards/MyPlacementRewardFunction.java
+
+# senses
+src/pas/risk/senses/MyActionSensorArray.java
+src/pas/risk/senses/MyPlacementSensorArray.java
+src/pas/risk/senses/MyStateSensorArray.java
+
+# agent
+src/pas/risk/agent/RiskQAgent.java

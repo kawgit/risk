@@ -1,0 +1,3 @@
+AgentIdx   Agent                         
+0          edu.bu.pas.risk.agent.RandomAgent
+1          edu.bu.pas.risk.agent.TrainerAgent

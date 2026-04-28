@@ -1,0 +1,133 @@
+package pas.risk.senses;
+
+import edu.bu.jmat.Matrix;
+import edu.bu.pas.risk.GameView;
+import edu.bu.pas.risk.action.Action;
+import edu.bu.pas.risk.action.AttackAction;
+import edu.bu.pas.risk.action.FortifyAction;
+import edu.bu.pas.risk.action.NoAction;
+import edu.bu.pas.risk.action.RedeemCardsAction;
+import edu.bu.pas.risk.agent.senses.ActionSensorArray;
+import edu.bu.pas.risk.territory.TerritoryCard;
+
+/**
+ * A suite of sensors to convert a {@link Action} into a feature vector (must be
+ * a row-vector)
+ */
+public class MyActionSensorArray extends ActionSensorArray {
+
+    public static final int MOVING_ARMIES_BINS = 6;
+    public static final int ATTACK_ARMIES_BINS = 4;
+    public static final int REDEMPTION_BINS = 6;
+
+    // Attack: flag (1), src (1), dst (1), moving (1+6=7), attacking (1+4=5)
+    public static final int NUM_ATTACK_FEATURES = 1 + 1 + 1 + (1 + MOVING_ARMIES_BINS) + (1 + ATTACK_ARMIES_BINS);
+    // Fortify: flag (1), src (1), dst (1), moving (1+6=7)
+    public static final int NUM_FORTIFY_FEATURES = 1 + 1 + 1 + (1 + MOVING_ARMIES_BINS);
+    // Redeem: flag (1), match (1), redemption (1+6=7)
+    public static final int NUM_REDEEM_FEATURES = 1 + 1 + (1 + REDEMPTION_BINS);
+    // NoAction: flag (1)
+    public static final int NUM_NO_ACTION_FEATURES = 1;
+
+    public static final int NUM_FEATURES_PER_TERRITORY = NUM_ATTACK_FEATURES + NUM_FORTIFY_FEATURES
+            + NUM_REDEEM_FEATURES + NUM_NO_ACTION_FEATURES;
+    public static final int NUM_TERRITORIES = 42;
+    public static final int NUM_FEATURES = NUM_TERRITORIES * NUM_FEATURES_PER_TERRITORY;
+
+    public MyActionSensorArray(final int agentId) {
+        super(agentId);
+    }
+
+    public Matrix getSensorValues(final GameView state,
+            final int actionCounter,
+            final Action action) {
+        Matrix result = Matrix.zeros(1, NUM_FEATURES);
+
+        boolean isAttack = action instanceof AttackAction;
+        boolean isFortify = action instanceof FortifyAction;
+        boolean isRedeem = action instanceof RedeemCardsAction;
+        boolean isNoAction = action instanceof NoAction;
+
+        AttackAction attack = isAttack ? (AttackAction) action : null;
+        FortifyAction fortify = isFortify ? (FortifyAction) action : null;
+        RedeemCardsAction redeem = isRedeem ? (RedeemCardsAction) action : null;
+
+        int tradeInNum = 1 + state.getNumPreviousRedemptions();
+        int redemptionAmount = isRedeem ? TerritoryCard.getRedemptionAmount(tradeInNum) : 0;
+
+        for (int i = 0; i < NUM_TERRITORIES; i++) {
+            int territoryId = i;
+            int offset = territoryId * NUM_FEATURES_PER_TERRITORY;
+
+            // --- ATTACK SECTION ---
+            if (isAttack) {
+                result.set(0, offset, 1);
+                result.set(0, offset + 1, attack.from().id() == territoryId ? 1 : 0);
+                result.set(0, offset + 2, attack.to().id() == territoryId ? 1 : 0);
+                int localOffset = offset + 3;
+                localOffset = encodeCount(result, localOffset, MOVING_ARMIES_BINS, attack.movingArmies(), true);
+                localOffset = encodeCount(result, localOffset, ATTACK_ARMIES_BINS, attack.attackingArmies(),
+                        true);
+                assert localOffset == offset + NUM_ATTACK_FEATURES;
+            }
+            offset += NUM_ATTACK_FEATURES;
+
+            // --- FORTIFY SECTION ---
+            if (isFortify) {
+                result.set(0, offset, 1);
+                result.set(0, offset + 1, fortify.from().id() == territoryId ? 1 : 0);
+                result.set(0, offset + 2, fortify.to().id() == territoryId ? 1 : 0);
+                int localOffset = offset + 3;
+                localOffset = encodeCount(result, localOffset, MOVING_ARMIES_BINS, fortify.deltaArmies(), true);
+                assert localOffset == offset + NUM_FORTIFY_FEATURES;
+            }
+            offset += NUM_FORTIFY_FEATURES;
+
+            // --- REDEEM SECTION ---
+            if (isRedeem) {
+                result.set(0, offset, 1);
+
+                int matches = 0;
+                if (!redeem.card1().isWild() && redeem.card1().territory().id() == territoryId)
+                    matches++;
+                if (!redeem.card2().isWild() && redeem.card2().territory().id() == territoryId)
+                    matches++;
+                if (!redeem.card3().isWild() && redeem.card3().territory().id() == territoryId)
+                    matches++;
+
+                result.set(0, offset + 1, matches);
+
+                int localOffset = offset + 2;
+                localOffset = encodeCount(result, localOffset, REDEMPTION_BINS, redemptionAmount, true);
+                assert localOffset == offset + NUM_REDEEM_FEATURES;
+            }
+            offset += NUM_REDEEM_FEATURES;
+
+            // --- NO ACTION SECTION ---
+            if (isNoAction) {
+                result.set(0, offset, 1);
+            }
+            offset += NUM_NO_ACTION_FEATURES;
+
+            assert offset == (territoryId + 1) * NUM_FEATURES_PER_TERRITORY;
+        }
+
+        return result;
+    }
+
+    public static int encodeCount(Matrix result, int offset, int num_bins, int count, boolean log_scale) {
+        result.set(0, offset, log_scale ? Math.log(1 + count) : count);
+        offset++;
+        int bin_idx = (int) Math.max(0, Math.min(num_bins - 1, count));
+        result.set(0, offset + bin_idx, 1);
+        offset += num_bins;
+        return offset;
+    }
+
+    public static void broadcast(Matrix result, int offset, double value) {
+        int num_features_per_territory = result.getShape().numCols() / 42;
+        for (int i = offset; i < result.getShape().numCols(); i += num_features_per_territory) {
+            result.set(0, i, value);
+        }
+    }
+}
