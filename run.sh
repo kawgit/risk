@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#$ -N train_v0
+#$ -N train_v1
 #$ -l h_rt=10:00:00
 #$ -pe omp 1
 #$ -l mem_per_core=8G
@@ -16,4 +16,4 @@ javac -cp "./lib/*:src" @risk.srcs || {
 }
 
 # Train
-java -cp "./lib/*:src" edu.bu.pas.risk.SequentialTrain pas.risk.agent.RiskQAgent random -x 100 -g .9 -t 100 -v 10 2>&1
+java -cp "./lib/*:src" edu.bu.pas.risk.SequentialTrain pas.risk.agent.RiskQAgent random -x 100 -g .9 -t 100 -v 10 -i /usr4/cs440/kawgit56/risk/params/qFunction10.model --outOffset 11 2>&1
