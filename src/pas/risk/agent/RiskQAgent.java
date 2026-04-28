@@ -282,9 +282,10 @@ public class RiskQAgent
                 game.getAgentInventory(this.agentId()).size() < 5);
         return this.chooseRandom(options);
         // List<Matrix> features = options.stream()
-        //         .map(action -> this.getActionFeatureVector(game, actionCounter, action))
-        //         .toList();
-        // return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::actionForward);
+        // .map(action -> this.getActionFeatureVector(game, actionCounter, action))
+        // .toList();
+        // return this.chooseRandomWithModelSoftmax(game, options, features,
+        // this.getModel()::actionForward);
     }
 
     /**
@@ -324,9 +325,10 @@ public class RiskQAgent
         final List<Action> options = this.getAttackRedeemActions(game, actionCounter, canRedeemCards);
         return this.chooseRandom(options);
         // List<Matrix> features = options.stream()
-        //         .map(action -> this.getActionFeatureVector(game, actionCounter, action))
-        //         .toList();
-        // return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::actionForward);
+        // .map(action -> this.getActionFeatureVector(game, actionCounter, action))
+        // .toList();
+        // return this.chooseRandomWithModelSoftmax(game, options, features,
+        // this.getModel()::actionForward);
     }
 
     /**
@@ -367,9 +369,10 @@ public class RiskQAgent
         final List<Action> options = this.getFortifyActions(game, actionCounter, canRedeemCards);
         return this.chooseRandom(options);
         // List<Matrix> features = options.stream()
-        //         .map(action -> this.getActionFeatureVector(game, actionCounter, action))
-        //         .toList();
-        // return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::actionForward);
+        // .map(action -> this.getActionFeatureVector(game, actionCounter, action))
+        // .toList();
+        // return this.chooseRandomWithModelSoftmax(game, options, features,
+        // this.getModel()::actionForward);
     }
 
     /**
@@ -411,9 +414,10 @@ public class RiskQAgent
         final List<Territory> options = this.getPotentialPlacements(game, isDuringSetup, remainingArmies);
         return this.chooseRandom(options);
         // List<Matrix> features = options.stream()
-        //         .map(option -> this.getPlacementFeatureVector(game, remainingArmies, option))
-        //         .toList();
-        // return this.chooseRandomWithModelSoftmax(game, options, features, this.getModel()::placementForward);
+        // .map(option -> this.getPlacementFeatureVector(game, remainingArmies, option))
+        // .toList();
+        // return this.chooseRandomWithModelSoftmax(game, options, features,
+        // this.getModel()::placementForward);
 
     }
 

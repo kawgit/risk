@@ -44,11 +44,17 @@ public class MyActionRewardFunction
 
     /** {@inheritDoc} */
     public double getStateReward(final GameView state) {
-        int armyDifference = 0;
+        double armyDifference = 0;
         for (TerritoryOwnerView view : state.getTerritoryOwners()) {
-            armyDifference += view.getArmies() * (view.getOwner() == this.getAgentId() ? 1 : -1);
+            armyDifference += Math.pow(view.getArmies(), 1.2) * (view.getOwner() == this.getAgentId() ? 1 : -1);
         }
-        double reward = armyDifference / 200;
+        for (TerritoryOwnerView view : state.getTerritoryOwners()) {
+            System.out.print(
+                    " " + String.format("%4d", view.getArmies() * (view.getOwner() == this.getAgentId() ? 1 : -1)));
+        }
+        System.out.println();
+
+        double reward = armyDifference / 1000;
         return Math.max(this.getLowerBound(), Math.min(this.getUpperBound(), reward));
     }
 
