@@ -205,15 +205,9 @@ public class RiskQAgent
             sum += expLogits[i];
         }
 
-        double maxProb = 0;
         for (int i = 0; i < logits.length; i++) {
             expLogits[i] /= sum;
-            if (expLogits[i] > maxProb) {
-                maxProb = expLogits[i];
-            }
         }
-
-        System.out.println(list.size() + " " + maxProb);
 
         double threshold = new Random().nextDouble();
         double cumulative = 0.0;
