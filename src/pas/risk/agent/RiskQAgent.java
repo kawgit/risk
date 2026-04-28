@@ -959,11 +959,6 @@ public class RiskQAgent
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 Matrix slice = X.getSlice(0, rows, i * in_features, (i + 1) * in_features);
                 H[i] = slice.matmul(W.getValue());
-                for (int r = 0; r < rows; r++) {
-                    for (int c = 0; c < out_features; c++) {
-                        H[i].set(r, c, H[i].get(r, c) + b.getValue().get(0, c));
-                    }
-                }
             }
 
             Matrix out = Matrix.zeros(rows, NUM_TERRITORIES * out_features);
@@ -973,6 +968,11 @@ public class RiskQAgent
                 for (int j = 0; j < NUM_TERRITORIES; j++) {
                     if (A_hat[i][j] != 0.0) {
                         addScaled(aggregated, H[j], A_hat[i][j]);
+                    }
+                }
+                for (int r = 0; r < rows; r++) {
+                    for (int c = 0; c < out_features; c++) {
+                        aggregated.set(r, c, aggregated.get(r, c) + b.getValue().get(0, c));
                     }
                 }
                 out.copySlice(0, rows, i * out_features, (i + 1) * out_features, aggregated);
@@ -1013,7 +1013,7 @@ public class RiskQAgent
                     }
                 }
 
-                Matrix dB = dH[i].sum(0);
+                Matrix dB = dOut[i].sum(0);
                 for (int c = 0; c < gradB.getShape().numCols(); c++) {
                     gradB.set(0, c, gradB.get(0, c) + dB.get(0, c));
                 }
