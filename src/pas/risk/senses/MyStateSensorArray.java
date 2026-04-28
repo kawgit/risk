@@ -48,7 +48,7 @@ public class MyStateSensorArray
             + (1 + NUM_ARMY_BUDGET_BINS)
             + (1 + NUM_ARMY_BONUS_BINS);
 
-    public static final int NUM_FEATURES = NUM_TERRITORIES * NUM_FEATURES_PER_TERRITORY;
+    public static final int NUM_FEATURES = NUM_TERRITORIES * NUM_FEATURES_PER_TERRITORY + 1;
 
     public MyStateSensorArray(final int agentId) {
         super(agentId);
@@ -111,10 +111,12 @@ public class MyStateSensorArray
             broadcast(result, i, result.get(0, i));
         }
 
+        result.set(0, NUM_FEATURES - 1, getStateReward(state));
+
         return result;
     }
 
-    public static int encodeCount(Matrix result, int offset, int num_bins, int count, boolean log_scale) {
+    private static int encodeCount(Matrix result, int offset, int num_bins, int count, boolean log_scale) {
         result.set(0, offset, log_scale ? Math.log(1 + count) : count);
         offset++;
         int bin_idx = (int) Math.max(0, Math.min(num_bins - 1, count));
@@ -123,11 +125,19 @@ public class MyStateSensorArray
         return offset;
     }
 
-    public static void broadcast(Matrix result, int offset, double value) {
+    private static void broadcast(Matrix result, int offset, double value) {
         int num_features_per_territory = result.getShape().numCols() / 42;
         for (int i = offset; i < result.getShape().numCols(); i += num_features_per_territory) {
             result.set(0, i, value);
         }
+    }
+
+    private double getStateReward(final GameView state) {
+        double armyDifference = 0;
+        for (TerritoryOwnerView view : state.getTerritoryOwners()) {
+            armyDifference += Math.pow(view.getArmies(), 1.2) * (view.getOwner() == this.getAgentId() ? 1 : -1);
+        }
+        return Math.max(-1000, Math.min(1000, armyDifference));
     }
 
 }

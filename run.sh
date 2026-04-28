@@ -16,4 +16,4 @@ javac -cp "./lib/*:src" @risk.srcs || {
 }
 
 # Train
-java -cp "./lib/*:src" edu.bu.pas.risk.SequentialTrain pas.risk.agent.RiskQAgent random -x 100 -g .9 -t 100 -v 10 -i /usr4/cs440/kawgit56/risk/params/qFunction10.model --outOffset 11 2>&1 | awk '{ print strftime("[%Y-%m-%d %H:%M:%S]"), $0 }'
+java -cp "./lib/*:src" edu.bu.pas.risk.SequentialTrain pas.risk.agent.RiskQAgent random -x 100 -g .9 -t 100 -v 10 2>&1 | awk '{ print strftime("[%Y-%m-%d %H:%M:%S]"), $0 }'

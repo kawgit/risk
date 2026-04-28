@@ -2,12 +2,14 @@ package pas.risk.senses;
 
 import edu.bu.jmat.Matrix;
 import edu.bu.pas.risk.GameView;
+import edu.bu.pas.risk.TerritoryOwnerView;
 import edu.bu.pas.risk.action.Action;
 import edu.bu.pas.risk.action.AttackAction;
 import edu.bu.pas.risk.action.FortifyAction;
 import edu.bu.pas.risk.action.NoAction;
 import edu.bu.pas.risk.action.RedeemCardsAction;
 import edu.bu.pas.risk.agent.senses.ActionSensorArray;
+import edu.bu.pas.risk.territory.Territory;
 import edu.bu.pas.risk.territory.TerritoryCard;
 
 /**
@@ -32,7 +34,7 @@ public class MyActionSensorArray extends ActionSensorArray {
     public static final int NUM_FEATURES_PER_TERRITORY = NUM_ATTACK_FEATURES + NUM_FORTIFY_FEATURES
             + NUM_REDEEM_FEATURES + NUM_NO_ACTION_FEATURES;
     public static final int NUM_TERRITORIES = 42;
-    public static final int NUM_FEATURES = NUM_TERRITORIES * NUM_FEATURES_PER_TERRITORY;
+    public static final int NUM_FEATURES = NUM_TERRITORIES * NUM_FEATURES_PER_TERRITORY + 1;
 
     public MyActionSensorArray(final int agentId) {
         super(agentId);
@@ -112,10 +114,54 @@ public class MyActionSensorArray extends ActionSensorArray {
             assert offset == (territoryId + 1) * NUM_FEATURES_PER_TERRITORY;
         }
 
+        // Bias calculation for actions should encode the expected deviation of future
+        // state rewards from current state reward
+
+        double bias = 0;
+        if (isAttack) {
+            // bonus for choosing greedily beneficial attacks
+            final double[][] expectedNetChange = {
+                    // 1 Def // 2 Def
+                    { -0.167, -0.491 }, // 1 Attacker Die
+                    { 0.157, -0.441 }, // 2 Attacker Dice
+                    { 0.319, 0.158 } // 3 Attacker Dice
+            };
+
+            TerritoryOwnerView toView = state.getTerritoryOwners().getById(attack.to().id());
+
+            int attackers = attack.attackingArmies();
+            int defenders = Math.min(toView.getArmies(), 2);
+
+            assert attackers >= 1 && attackers <= 3;
+            assert defenders >= 1 && defenders <= 2;
+
+            bias = expectedNetChange[attackers - 1][defenders - 1];
+        } else if (isFortify) {
+            // bonus for increasing concentration of forces
+            TerritoryOwnerView fromView = state.getTerritoryOwners().getById(fortify.from().id());
+            TerritoryOwnerView toView = state.getTerritoryOwners().getById(fortify.to().id());
+
+            int oldFromArmies = fromView.getArmies();
+            int oldToArmies = toView.getArmies();
+
+            int newFromArmies = oldFromArmies - fortify.deltaArmies();
+            int newToArmies = oldToArmies + fortify.deltaArmies();
+
+            double oldScore = Math.pow(oldFromArmies, 1.2) + Math.pow(oldToArmies, 1.2);
+            double newScore = Math.pow(newFromArmies, 1.2) + Math.pow(newToArmies, 1.2);
+
+            bias = newScore - oldScore;
+        } else if (isRedeem) {
+            // bonus for redemption amount
+            bias = redemptionAmount;
+        }
+
+        result.set(0, NUM_FEATURES - 1, bias);
+
         return result;
     }
 
-    public static int encodeCount(Matrix result, int offset, int num_bins, int count, boolean log_scale) {
+    private static int encodeCount(Matrix result, int offset, int num_bins, int count, boolean log_scale) {
         result.set(0, offset, log_scale ? Math.log(1 + count) : count);
         offset++;
         int bin_idx = (int) Math.max(0, Math.min(num_bins - 1, count));
@@ -124,10 +170,4 @@ public class MyActionSensorArray extends ActionSensorArray {
         return offset;
     }
 
-    public static void broadcast(Matrix result, int offset, double value) {
-        int num_features_per_territory = result.getShape().numCols() / 42;
-        for (int i = offset; i < result.getShape().numCols(); i += num_features_per_territory) {
-            result.set(0, i, value);
-        }
-    }
 }

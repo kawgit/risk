@@ -5,7 +5,6 @@ import java.util.*;
 
 // JAVA PROJECT IMPORTS
 import edu.bu.jmat.Matrix;
-import edu.bu.jnn.layers.*;
 import edu.bu.jnn.models.Sequential;
 import edu.bu.jnn.Module;
 import edu.bu.jnn.Parameter;
@@ -89,10 +88,10 @@ public class RiskQAgent
         Sequential encoder = new Sequential();
         encoder.add(new HackyTerritoryLinear(MyStateSensorArray.NUM_FEATURES_PER_TERRITORY, hiddenTerritoryDim));
         encoder.add(new HackyTerritoryRMSNorm());
-        encoder.add(new ReLU());
+        encoder.add(new HackyPassThroughReLU());
         encoder.add(new HackyKipfWellingGCN(hiddenTerritoryDim, hiddenTerritoryDim));
         encoder.add(new HackyTerritoryRMSNorm());
-        encoder.add(new ReLU());
+        encoder.add(new HackyPassThroughReLU());
 
         // action decoder
         Sequential actionDecoder = new Sequential();
@@ -103,13 +102,13 @@ public class RiskQAgent
                 hiddenTerritoryDim + MyActionSensorArray.NUM_FEATURES_PER_TERRITORY,
                 hiddenTerritoryDim));
         actionDecoder.add(new HackyTerritoryRMSNorm());
-        actionDecoder.add(new ReLU());
+        actionDecoder.add(new HackyPassThroughReLU());
         actionDecoder.add(new HackyKipfWellingGCN(hiddenTerritoryDim, hiddenTerritoryDim));
         actionDecoder.add(new HackyTerritoryRMSNorm());
-        actionDecoder.add(new ReLU());
+        actionDecoder.add(new HackyPassThroughReLU());
         actionDecoder.add(new HackyReduceSum(hiddenTerritoryDim));
         actionDecoder.add(new HackyRMSNorm());
-        actionDecoder.add(new Dense(hiddenTerritoryDim, 1));
+        actionDecoder.add(new HackyPassThroughDense(hiddenTerritoryDim, 1));
 
         // placement decoder
         Sequential placementDecoder = new Sequential();
@@ -120,13 +119,13 @@ public class RiskQAgent
                 hiddenTerritoryDim + MyPlacementSensorArray.NUM_FEATURES_PER_TERRITORY,
                 hiddenTerritoryDim));
         placementDecoder.add(new HackyTerritoryRMSNorm());
-        placementDecoder.add(new ReLU());
+        placementDecoder.add(new HackyPassThroughReLU());
         placementDecoder.add(new HackyKipfWellingGCN(hiddenTerritoryDim, hiddenTerritoryDim));
         placementDecoder.add(new HackyTerritoryRMSNorm());
-        placementDecoder.add(new ReLU());
+        placementDecoder.add(new HackyPassThroughReLU());
         placementDecoder.add(new HackyReduceSum(hiddenTerritoryDim));
         placementDecoder.add(new HackyRMSNorm());
-        placementDecoder.add(new Dense(hiddenTerritoryDim, 1));
+        placementDecoder.add(new HackyPassThroughDense(hiddenTerritoryDim, 1));
 
         var model = new DualDecoderModel(encoder, actionDecoder, placementDecoder);
         // try {
@@ -197,9 +196,8 @@ public class RiskQAgent
     }
 
     public <T> T chooseRandomWithLogits(final List<T> list, final double[] logits, final double temperature) {
-        if (list.size() != logits.length || logits.length == 0) {
-            throw new IllegalArgumentException();
-        }
+        assert list.size() == logits.length || logits.length == 0
+                : "List size must match logits length, or logits must be empty.";
 
         double maxLogit = Double.NEGATIVE_INFINITY;
         for (double logit : logits) {
@@ -218,8 +216,6 @@ public class RiskQAgent
         for (int i = 0; i < logits.length; i++) {
             expLogits[i] /= sum;
         }
-
-        System.out.println(Arrays.toString(expLogits));
 
         double threshold = this.rng.nextDouble();
         double cumulative = 0.0;
@@ -243,9 +239,8 @@ public class RiskQAgent
             final List<T> options,
             final List<Matrix> featureVectors,
             final ModelForward modelCall) {
-        if (options.isEmpty() || options.size() != featureVectors.size()) {
-            throw new IllegalArgumentException("Options and features must be non-empty and matching in size.");
-        }
+        assert !options.isEmpty() && options.size() == featureVectors.size()
+                : "Options and features must be non-empty and matching in size.";
 
         final Matrix stateFeatures = this.getStateFeatureVector(game);
         double[] logits = new double[options.size()];
@@ -280,12 +275,11 @@ public class RiskQAgent
             final boolean canRedeemCards) {
         final List<Action> options = this.getRedeemActions(game, actionCounter, canRedeemCards,
                 game.getAgentInventory(this.agentId()).size() < 5);
-        return this.chooseRandom(options);
-        // List<Matrix> features = options.stream()
-        // .map(action -> this.getActionFeatureVector(game, actionCounter, action))
-        // .toList();
-        // return this.chooseRandomWithModelSoftmax(game, options, features,
-        // this.getModel()::actionForward);
+        List<Matrix> features = options.stream()
+                .map(action -> this.getActionFeatureVector(game, actionCounter, action))
+                .toList();
+        return this.chooseRandomWithModelSoftmax(game, options, features,
+                this.getModel()::actionForward);
     }
 
     /**
@@ -323,12 +317,11 @@ public class RiskQAgent
             final int actionCounter,
             final boolean canRedeemCards) {
         final List<Action> options = this.getAttackRedeemActions(game, actionCounter, canRedeemCards);
-        return this.chooseRandom(options);
-        // List<Matrix> features = options.stream()
-        // .map(action -> this.getActionFeatureVector(game, actionCounter, action))
-        // .toList();
-        // return this.chooseRandomWithModelSoftmax(game, options, features,
-        // this.getModel()::actionForward);
+        List<Matrix> features = options.stream()
+                .map(action -> this.getActionFeatureVector(game, actionCounter, action))
+                .toList();
+        return this.chooseRandomWithModelSoftmax(game, options, features,
+                this.getModel()::actionForward);
     }
 
     /**
@@ -367,12 +360,11 @@ public class RiskQAgent
             final int actionCounter,
             final boolean canRedeemCards) {
         final List<Action> options = this.getFortifyActions(game, actionCounter, canRedeemCards);
-        return this.chooseRandom(options);
-        // List<Matrix> features = options.stream()
-        // .map(action -> this.getActionFeatureVector(game, actionCounter, action))
-        // .toList();
-        // return this.chooseRandomWithModelSoftmax(game, options, features,
-        // this.getModel()::actionForward);
+        List<Matrix> features = options.stream()
+                .map(action -> this.getActionFeatureVector(game, actionCounter, action))
+                .toList();
+        return this.chooseRandomWithModelSoftmax(game, options, features,
+                this.getModel()::actionForward);
     }
 
     /**
@@ -412,12 +404,11 @@ public class RiskQAgent
             final boolean isDuringSetup,
             final int remainingArmies) {
         final List<Territory> options = this.getPotentialPlacements(game, isDuringSetup, remainingArmies);
-        return this.chooseRandom(options);
-        // List<Matrix> features = options.stream()
-        // .map(option -> this.getPlacementFeatureVector(game, remainingArmies, option))
-        // .toList();
-        // return this.chooseRandomWithModelSoftmax(game, options, features,
-        // this.getModel()::placementForward);
+        List<Matrix> features = options.stream()
+                .map(option -> this.getPlacementFeatureVector(game, remainingArmies, option))
+                .toList();
+        return this.chooseRandomWithModelSoftmax(game, options, features,
+                this.getModel()::placementForward);
 
     }
 
@@ -443,16 +434,19 @@ public class RiskQAgent
 
     public class HackyTerritoryRMSNorm extends Module {
         private static final int NUM_TERRITORIES = 42;
-        private final double eps = 1e-8;
+        private final double eps = 1e-5;
 
         public HackyTerritoryRMSNorm() {
         }
 
         public Matrix forward(Matrix X) throws Exception {
-            int territory_dim = X.getShape().numCols() / NUM_TERRITORIES;
+            assert (X.getShape().numCols() - 1) % NUM_TERRITORIES == 0;
+            int territory_dim = (X.getShape().numCols() - 1) / NUM_TERRITORIES;
 
             int rows = X.getShape().numRows();
-            Matrix out = Matrix.zeros(rows, NUM_TERRITORIES * territory_dim);
+            Matrix out = Matrix.zeros(rows, X.getShape().numCols());
+            for (int r = 0; r < rows; r++)
+                out.set(r, X.getShape().numCols() - 1, X.get(r, X.getShape().numCols() - 1));
 
             for (int r = 0; r < rows; r++) {
                 for (int i = 0; i < NUM_TERRITORIES; i++) {
@@ -474,11 +468,15 @@ public class RiskQAgent
         }
 
         public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
+            assert (X.getShape().numCols() - 1) % NUM_TERRITORIES == 0;
+            assert dLoss_dModule.getShape().numCols() == X.getShape().numCols();
 
-            int territory_dim = X.getShape().numCols() / NUM_TERRITORIES;
+            int territory_dim = (X.getShape().numCols() - 1) / NUM_TERRITORIES;
 
             int rows = X.getShape().numRows();
-            Matrix dLoss_dX = Matrix.zeros(rows, NUM_TERRITORIES * territory_dim);
+            Matrix dLoss_dX = Matrix.zeros(rows, X.getShape().numCols());
+            for (int r = 0; r < rows; r++)
+                dLoss_dX.set(r, X.getShape().numCols() - 1, dLoss_dModule.get(r, X.getShape().numCols() - 1));
 
             for (int r = 0; r < rows; r++) {
                 for (int i = 0; i < NUM_TERRITORIES; i++) {
@@ -548,8 +546,22 @@ public class RiskQAgent
         }
 
         public Matrix forward(Matrix X) throws Exception {
+            assert X.getShape().numCols() == NUM_TERRITORIES * input_territory_size + 1;
             int rows = X.getShape().numRows();
-            Matrix territory_output = Matrix.zeros(rows, NUM_TERRITORIES * output_territory_size);
+
+            // Sanitize inputs from sensors
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < X.getShape().numCols(); c++) {
+                    double val = X.get(r, c);
+                    if (Double.isNaN(val) || Double.isInfinite(val)) {
+                        X.set(r, c, 0.0);
+                    }
+                }
+            }
+
+            Matrix territory_output = Matrix.zeros(rows, NUM_TERRITORIES * output_territory_size + 1);
+            for (int r = 0; r < rows; r++)
+                territory_output.set(r, NUM_TERRITORIES * output_territory_size, X.get(r, X.getShape().numCols() - 1));
 
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 Matrix slice = X.getSlice(0, rows, i * input_territory_size, (i + 1) * input_territory_size);
@@ -566,8 +578,13 @@ public class RiskQAgent
         }
 
         public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
+            assert X.getShape().numCols() == NUM_TERRITORIES * input_territory_size + 1;
+            assert dLoss_dModule.getShape().numCols() == NUM_TERRITORIES * output_territory_size + 1;
             int rows = X.getShape().numRows();
             Matrix dLoss_dX = Matrix.zeros(rows, X.getShape().numCols());
+            for (int r = 0; r < rows; r++)
+                dLoss_dX.set(r, X.getShape().numCols() - 1,
+                        dLoss_dModule.get(r, dLoss_dModule.getShape().numCols() - 1));
 
             Matrix gradW = this.W_territory.getGradient();
             Matrix gradB = this.b_territory.getGradient();
@@ -580,13 +597,13 @@ public class RiskQAgent
                 Matrix dW = slice_in.transpose().matmul(dLoss_dSliceOut);
                 for (int r = 0; r < gradW.getShape().numRows(); r++) {
                     for (int c = 0; c < gradW.getShape().numCols(); c++) {
-                        gradW.set(r, c, gradW.get(r, c) + dW.get(r, c));
+                        gradW.set(r, c, gradW.get(r, c) + dW.get(r, c) + 1e-12);
                     }
                 }
 
                 Matrix dB = dLoss_dSliceOut.sum(0);
                 for (int c = 0; c < gradB.getShape().numCols(); c++) {
-                    gradB.set(0, c, gradB.get(0, c) + dB.get(0, c));
+                    gradB.set(0, c, gradB.get(0, c) + dB.get(0, c) + 1e-12);
                 }
 
                 Matrix dLoss_dSliceIn = dLoss_dSliceOut.matmul(this.W_territory.getValue().transpose());
@@ -616,11 +633,24 @@ public class RiskQAgent
         }
 
         public Matrix forward(Matrix X) throws Exception {
+            assert X.getShape().numCols() == NUM_TERRITORIES * t1_size + 1 + NUM_TERRITORIES * t2_size + 1;
             int rows = X.getShape().numRows();
-            int out_t_size = t1_size + t2_size;
-            Matrix out = Matrix.zeros(rows, NUM_TERRITORIES * out_t_size);
+            int cols = X.getShape().numCols();
 
-            int offset_B = NUM_TERRITORIES * t1_size;
+            // Sanitize inputs from sensors
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    double val = X.get(r, c);
+                    if (Double.isNaN(val) || Double.isInfinite(val)) {
+                        X.set(r, c, 0.0);
+                    }
+                }
+            }
+
+            int out_t_size = t1_size + t2_size;
+            Matrix out = Matrix.zeros(rows, NUM_TERRITORIES * out_t_size + 1);
+
+            int offset_B = NUM_TERRITORIES * t1_size + 1;
 
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 Matrix t_a = X.getSlice(0, rows, i * t1_size, (i + 1) * t1_size);
@@ -630,16 +660,30 @@ public class RiskQAgent
                 out.copySlice(0, rows, (i * out_t_size) + t1_size, (i + 1) * out_t_size, t_b);
             }
 
+            for (int r = 0; r < rows; r++) {
+                double bias1 = X.get(r, NUM_TERRITORIES * t1_size);
+                double bias2 = X.get(r, cols - 1);
+                out.set(r, NUM_TERRITORIES * out_t_size, bias1 + bias2);
+            }
+
             return out;
         }
 
         public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
+            assert X.getShape().numCols() == NUM_TERRITORIES * t1_size + 1 + NUM_TERRITORIES * t2_size + 1;
+            assert dLoss_dModule.getShape().numCols() == NUM_TERRITORIES * (t1_size + t2_size) + 1;
             int rows = X.getShape().numRows();
             int cols = X.getShape().numCols();
             Matrix dLoss_dX = Matrix.zeros(rows, cols);
 
-            int offset_B = NUM_TERRITORIES * t1_size;
+            int offset_B = NUM_TERRITORIES * t1_size + 1;
             int out_t_size = t1_size + t2_size;
+
+            for (int r = 0; r < rows; r++) {
+                double dbias = dLoss_dModule.get(r, dLoss_dModule.getShape().numCols() - 1);
+                dLoss_dX.set(r, NUM_TERRITORIES * t1_size, dbias);
+                dLoss_dX.set(r, cols - 1, dbias);
+            }
 
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 Matrix dLoss_t_ab = dLoss_dModule.getSlice(0, rows, i * out_t_size, (i + 1) * out_t_size);
@@ -659,17 +703,20 @@ public class RiskQAgent
     }
 
     public class HackyRMSNorm extends Module {
-        private final double eps = 1e-8;
+        private final double eps = 1e-5;
 
         public HackyRMSNorm() {
         }
 
         public Matrix forward(Matrix X) throws Exception {
+            assert X.getShape().numCols() >= 2;
             int rows = X.getShape().numRows();
-            int dim = X.getShape().numCols();
-            Matrix out = Matrix.zeros(rows, dim);
+            int cols = X.getShape().numCols();
+            int dim = cols - 1;
+            Matrix out = Matrix.zeros(rows, cols);
 
             for (int r = 0; r < rows; r++) {
+                out.set(r, cols - 1, X.get(r, cols - 1));
                 double sumSq = 0.0;
                 for (int c = 0; c < dim; c++) {
                     double val = X.get(r, c);
@@ -686,11 +733,15 @@ public class RiskQAgent
         }
 
         public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
+            assert X.getShape().numCols() >= 2;
+            assert dLoss_dModule.getShape().numCols() == X.getShape().numCols();
             int rows = X.getShape().numRows();
-            int dim = X.getShape().numCols();
-            Matrix dLoss_dX = Matrix.zeros(rows, dim);
+            int cols = X.getShape().numCols();
+            int dim = cols - 1;
+            Matrix dLoss_dX = Matrix.zeros(rows, cols);
 
             for (int r = 0; r < rows; r++) {
+                dLoss_dX.set(r, cols - 1, dLoss_dModule.get(r, cols - 1));
                 double sumSq = 0.0;
                 for (int c = 0; c < dim; c++) {
                     double val = X.get(r, c);
@@ -728,11 +779,16 @@ public class RiskQAgent
         }
 
         public Matrix forward(Matrix X) throws Exception {
+            assert (X.getShape().numCols() - 1) % vectorDim == 0;
             int rows = X.getShape().numRows();
             int cols = X.getShape().numCols();
-            int numVectors = cols / vectorDim;
+            int numVectors = (cols - 1) / vectorDim;
 
-            Matrix out = Matrix.zeros(rows, vectorDim);
+            Matrix out = Matrix.zeros(rows, vectorDim + 1);
+
+            for (int r = 0; r < rows; r++) {
+                out.set(r, vectorDim, X.get(r, cols - 1));
+            }
 
             for (int i = 0; i < numVectors; i++) {
                 for (int r = 0; r < rows; r++) {
@@ -746,14 +802,20 @@ public class RiskQAgent
         }
 
         public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
+            assert (X.getShape().numCols() - 1) % vectorDim == 0;
+            assert dLoss_dModule.getShape().numCols() == vectorDim + 1;
             int rows = X.getShape().numRows();
             int cols = X.getShape().numCols();
-            int numVectors = cols / vectorDim;
+            int numVectors = (cols - 1) / vectorDim;
 
             Matrix dLoss_dX = Matrix.zeros(rows, cols);
+            for (int r = 0; r < rows; r++) {
+                dLoss_dX.set(r, cols - 1, dLoss_dModule.get(r, vectorDim));
+            }
 
+            Matrix dLoss_dModule_features = dLoss_dModule.getSlice(0, rows, 0, vectorDim);
             for (int i = 0; i < numVectors; i++) {
-                dLoss_dX.copySlice(0, rows, i * vectorDim, (i + 1) * vectorDim, dLoss_dModule);
+                dLoss_dX.copySlice(0, rows, i * vectorDim, (i + 1) * vectorDim, dLoss_dModule_features);
             }
 
             return dLoss_dX;
@@ -921,26 +983,19 @@ public class RiskQAgent
         private void initGraphMatrix() {
             this.A_hat = new double[NUM_TERRITORIES][NUM_TERRITORIES];
             double[] D_tilde = new double[NUM_TERRITORIES];
-            int[][] A_tilde = new int[NUM_TERRITORIES][NUM_TERRITORIES];
-
-            boolean hasAdjacency = ADJACENCY_MATRIX != null && ADJACENCY_MATRIX.length == NUM_TERRITORIES;
 
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 double degree = 0.0;
                 for (int j = 0; j < NUM_TERRITORIES; j++) {
-                    A_tilde[i][j] = hasAdjacency ? ADJACENCY_MATRIX[i][j] : 0;
-                    if (i == j) {
-                        A_tilde[i][j] += 1;
-                    }
-                    degree += A_tilde[i][j];
+                    degree += ADJACENCY_MATRIX[i][j];
                 }
                 D_tilde[i] = degree;
             }
 
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 for (int j = 0; j < NUM_TERRITORIES; j++) {
-                    if (A_tilde[i][j] > 0) {
-                        this.A_hat[i][j] = A_tilde[i][j] / Math.sqrt(D_tilde[i] * D_tilde[j]);
+                    if (ADJACENCY_MATRIX[i][j] > 0) {
+                        this.A_hat[i][j] = ADJACENCY_MATRIX[i][j] / Math.sqrt(D_tilde[i] * D_tilde[j]);
                     }
                 }
             }
@@ -967,6 +1022,7 @@ public class RiskQAgent
         }
 
         public Matrix forward(Matrix X) throws Exception {
+            assert X.getShape().numCols() == NUM_TERRITORIES * in_features + 1;
             int rows = X.getShape().numRows();
             Matrix[] H = new Matrix[NUM_TERRITORIES];
 
@@ -975,7 +1031,8 @@ public class RiskQAgent
                 H[i] = slice.matmul(W.getValue());
             }
 
-            Matrix out = Matrix.zeros(rows, NUM_TERRITORIES * out_features);
+            int cols = X.getShape().numCols();
+            Matrix out = Matrix.zeros(rows, NUM_TERRITORIES * out_features + 1);
 
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 Matrix aggregated = Matrix.zeros(rows, out_features);
@@ -992,12 +1049,21 @@ public class RiskQAgent
                 out.copySlice(0, rows, i * out_features, (i + 1) * out_features, aggregated);
             }
 
+            for (int r = 0; r < rows; r++) {
+                out.set(r, NUM_TERRITORIES * out_features, X.get(r, cols - 1));
+            }
+
             return out;
         }
 
         public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
+            assert X.getShape().numCols() == NUM_TERRITORIES * in_features + 1;
+            assert dLoss_dModule.getShape().numCols() == NUM_TERRITORIES * out_features + 1;
             int rows = X.getShape().numRows();
-            Matrix dLoss_dX = Matrix.zeros(rows, NUM_TERRITORIES * in_features);
+            Matrix dLoss_dX = Matrix.zeros(rows, NUM_TERRITORIES * in_features + 1);
+            for (int r = 0; r < rows; r++) {
+                dLoss_dX.set(r, NUM_TERRITORIES * in_features, dLoss_dModule.get(r, NUM_TERRITORIES * out_features));
+            }
 
             Matrix[] dOut = new Matrix[NUM_TERRITORIES];
             for (int i = 0; i < NUM_TERRITORIES; i++) {
@@ -1023,13 +1089,13 @@ public class RiskQAgent
                 Matrix dW = slice_in.transpose().matmul(dH[i]);
                 for (int r = 0; r < gradW.getShape().numRows(); r++) {
                     for (int c = 0; c < gradW.getShape().numCols(); c++) {
-                        gradW.set(r, c, gradW.get(r, c) + dW.get(r, c));
+                        gradW.set(r, c, gradW.get(r, c) + dW.get(r, c) + 1e-12);
                     }
                 }
 
                 Matrix dB = dOut[i].sum(0);
                 for (int c = 0; c < gradB.getShape().numCols(); c++) {
-                    gradB.set(0, c, gradB.get(0, c) + dB.get(0, c));
+                    gradB.set(0, c, gradB.get(0, c) + dB.get(0, c) + 1e-12);
                 }
 
                 Matrix dLoss_dSliceIn = dH[i].matmul(this.W.getValue().transpose());
@@ -1046,4 +1112,145 @@ public class RiskQAgent
             return params;
         }
     }
+
+    public class HackyPassThroughReLU extends Module {
+        public HackyPassThroughReLU() {
+        }
+
+        public Matrix forward(Matrix X) throws Exception {
+            assert X.getShape().numCols() >= 2;
+            int rows = X.getShape().numRows();
+            int cols = X.getShape().numCols();
+            Matrix out = Matrix.zeros(rows, cols);
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols - 1; c++) {
+                    out.set(r, c, Math.max(0.0, X.get(r, c)));
+                }
+                out.set(r, cols - 1, X.get(r, cols - 1));
+            }
+            return out;
+        }
+
+        public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
+            assert X.getShape().numCols() >= 2;
+            assert dLoss_dModule.getShape().numCols() == X.getShape().numCols();
+            int rows = X.getShape().numRows();
+            int cols = X.getShape().numCols();
+            Matrix dLoss_dX = Matrix.zeros(rows, cols);
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols - 1; c++) {
+                    if (X.get(r, c) > 0) {
+                        dLoss_dX.set(r, c, dLoss_dModule.get(r, c));
+                    }
+                }
+                dLoss_dX.set(r, cols - 1, dLoss_dModule.get(r, cols - 1));
+            }
+            return dLoss_dX;
+        }
+
+        public List<Parameter> getParameters() {
+            return new ArrayList<>(0);
+        }
+    }
+
+    public class HackyPassThroughDense extends Module {
+        private Parameter W;
+        private Parameter b;
+        private final int in_features;
+        private final int out_features;
+
+        private int numForwardPasses;
+        private int numBackwardsPasses;
+
+        public HackyPassThroughDense(int in_features, int out_features) {
+            this.in_features = in_features;
+            this.out_features = out_features;
+
+            Random rng = new Random();
+            double bound = Math.sqrt(1.0 / (double) in_features);
+            this.W = new Parameter(Matrix.zeros(in_features + 1, out_features));
+            this.b = new Parameter(Matrix.zeros(1, out_features));
+
+            // Initialize normal features
+            for (int r = 0; r < in_features; r++) {
+                for (int c = 0; c < out_features; c++) {
+                    this.W.getValue().set(r, c, -bound + (2 * bound) * rng.nextDouble());
+                }
+            }
+            // Initialize bias scaling to 10
+            for (int c = 0; c < out_features; c++) {
+                this.W.getValue().set(in_features, c, 1.0);
+            }
+
+            this.numForwardPasses = 0;
+            this.numBackwardsPasses = 0;
+
+            initUniform(this.b.getValue(), -bound, bound, rng);
+        }
+
+        private void initUniform(Matrix m, double min, double max, Random rng) {
+            int rows = m.getShape().numRows();
+            int cols = m.getShape().numCols();
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    m.set(r, c, min + (max - min) * rng.nextDouble());
+                }
+            }
+        }
+
+        public Matrix forward(Matrix X) throws Exception {
+            this.numForwardPasses++;
+
+            assert X.getShape().numCols() == in_features + 1;
+            int rows = X.getShape().numRows();
+            Matrix out = X.matmul(W.getValue());
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < out_features; c++) {
+                    out.set(r, c, out.get(r, c) + b.getValue().get(0, c));
+                }
+            }
+            return out;
+        }
+
+        public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
+            this.numBackwardsPasses++;
+
+            assert X.getShape().numCols() == in_features + 1;
+            assert dLoss_dModule.getShape().numCols() == out_features;
+
+            // Sanitize incoming loss gradients from the framework
+            for (int r = 0; r < dLoss_dModule.getShape().numRows(); r++) {
+                for (int c = 0; c < dLoss_dModule.getShape().numCols(); c++) {
+                    double val = dLoss_dModule.get(r, c);
+                    if (Double.isNaN(val) || Double.isInfinite(val) || Math.abs(val) > 10000.0) {
+                        dLoss_dModule.set(r, c, 0.0);
+                    }
+                }
+            }
+
+            Matrix dW = X.transpose().matmul(dLoss_dModule);
+            Matrix gradW = W.getGradient();
+            for (int r = 0; r < gradW.getShape().numRows(); r++) {
+                for (int c = 0; c < gradW.getShape().numCols(); c++) {
+                    gradW.set(r, c, gradW.get(r, c) + dW.get(r, c) + 1e-12);
+                }
+            }
+
+            Matrix dB = dLoss_dModule.sum(0);
+            Matrix gradB = b.getGradient();
+            for (int c = 0; c < gradB.getShape().numCols(); c++) {
+                gradB.set(0, c, gradB.get(0, c) + dB.get(0, c) + 1e-12);
+            }
+
+            return dLoss_dModule.matmul(W.getValue().transpose());
+        }
+
+        public List<Parameter> getParameters() {
+            List<Parameter> params = new ArrayList<>(2);
+            params.add(W);
+            params.add(b);
+            return params;
+        }
+    }
+
 }

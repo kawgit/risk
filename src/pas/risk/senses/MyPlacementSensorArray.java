@@ -17,7 +17,7 @@ public class MyPlacementSensorArray
 
     public static final int NUM_FEATURES_PER_TERRITORY = 2; // is_target_territory, is_target_continent
     public static final int NUM_TERRITORIES = 42;
-    public static final int NUM_FEATURES = NUM_TERRITORIES * NUM_FEATURES_PER_TERRITORY;
+    public static final int NUM_FEATURES = NUM_TERRITORIES * NUM_FEATURES_PER_TERRITORY + 1;
 
     public MyPlacementSensorArray(final int agentId) {
         super(agentId);
@@ -43,23 +43,24 @@ public class MyPlacementSensorArray
             }
         }
 
+        double bias = 1;
+        int oldArmyCount = state.getTerritoryOwners().getById(territory.id()).getArmies();
+        int newArmyCount = oldArmyCount + 1;
+
+        // bonus for picking unclaimed territory
+        // if (oldArmyCount == 0) {
+        // bias += 5;
+        // }
+
+        // bonus for increasing concentration of forces
+        double oldScore = Math.pow(oldArmyCount, 1.2);
+        double newScore = Math.pow(newArmyCount, 1.2);
+
+        bias += newScore - oldScore;
+
+        result.set(0, NUM_FEATURES - 1, bias);
+
         return result;
-    }
-
-    public static int encodeCount(Matrix result, int offset, int num_bins, int count, boolean log_scale) {
-        result.set(0, offset, log_scale ? Math.log(1 + count) : count);
-        offset++;
-        int bin_idx = (int) Math.max(0, Math.min(num_bins - 1, count));
-        result.set(0, offset + bin_idx, 1);
-        offset += num_bins;
-        return offset;
-    }
-
-    public static void broadcast(Matrix result, int offset, double value) {
-        int num_features_per_territory = result.getShape().numCols() / 42;
-        for (int i = offset; i < result.getShape().numCols(); i += num_features_per_territory) {
-            result.set(0, i, value);
-        }
     }
 
 }
