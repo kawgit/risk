@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#$ -N risk_seqtrain
+#$ -N train_v0
 #$ -l h_rt=10:00:00
 #$ -pe omp 1
 #$ -l mem_per_core=4G
