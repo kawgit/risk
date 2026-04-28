@@ -124,7 +124,14 @@ public class RiskQAgent
         placementDecoder.add(new HackyRMSNorm());
         placementDecoder.add(new Dense(hiddenTerritoryDim, 1));
 
-        return new DualDecoderModel(encoder, actionDecoder, placementDecoder);
+        var model = new DualDecoderModel(encoder, actionDecoder, placementDecoder);
+        // try {
+        // model.load("/Users/kawgit/Assignments/risk/qFunction10.model");
+        // System.out.println("Model loaded");
+        // } catch (Exception e) {
+        // System.out.println("Model not found");
+        // }
+        return model;
     }
 
     /**
@@ -537,7 +544,7 @@ public class RiskQAgent
                 for (int r = 0; r < rows; r++) {
                     for (int c = 0; c < output_territory_size; c++) {
                         territory_output.set(r, i * output_territory_size + c,
-                            processed.get(r, c) + b_territory.getValue().get(0, c));
+                                processed.get(r, c) + b_territory.getValue().get(0, c));
                     }
                 }
             }
