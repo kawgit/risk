@@ -290,7 +290,7 @@ public class RiskQAgent
     public boolean shouldExploreRedeemMovePhase(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        return true;
+        return Math.random() < 0.8;
     }
 
     /**
@@ -332,7 +332,7 @@ public class RiskQAgent
     public boolean shouldExploreAttackRedeemIfForcedMovePhase(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        return true;
+        return Math.random() < 0.8;
     }
 
     /**
@@ -373,7 +373,7 @@ public class RiskQAgent
     public boolean shouldExploreFortifySkipMovePhase(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        return true;
+        return Math.random() < 0.8;
     }
 
     /**
@@ -418,7 +418,7 @@ public class RiskQAgent
     public boolean shouldExplorePlacementPhase(final GameView game,
             final boolean isDuringSetup,
             final int remainingArmies) {
-        return true;
+        return Math.random() < 0.8;
     }
 
     public class HackyTerritoryRMSNorm extends Module {
