@@ -534,13 +534,18 @@ public class RiskQAgent
         }
 
         public Matrix forward(Matrix X) throws Exception {
-            Matrix territory_output = null;
             int rows = X.getShape().numRows();
+            Matrix territory_output = Matrix.zeros(rows, NUM_TERRITORIES * output_territory_size);
 
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 Matrix slice = X.getSlice(0, rows, i * input_territory_size, (i + 1) * input_territory_size);
-                Matrix processed = slice.matmul(W_territory.getValue()).add(b_territory.getValue());
-                territory_output = (territory_output == null) ? processed : concatCols(territory_output, processed);
+                Matrix processed = slice.matmul(W_territory.getValue());
+                for (int r = 0; r < rows; r++) {
+                    for (int c = 0; c < output_territory_size; c++) {
+                        territory_output.set(r, i * output_territory_size + c,
+                            processed.get(r, c) + b_territory.getValue().get(0, c));
+                    }
+                }
             }
 
             return territory_output;
@@ -550,30 +555,31 @@ public class RiskQAgent
             int rows = X.getShape().numRows();
             Matrix dLoss_dX = Matrix.zeros(rows, X.getShape().numCols());
 
+            Matrix gradW = this.W_territory.getGradient();
+            Matrix gradB = this.b_territory.getGradient();
+
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 Matrix dLoss_dSliceOut = dLoss_dModule.getSlice(0, rows, i * output_territory_size,
                         (i + 1) * output_territory_size);
                 Matrix slice_in = X.getSlice(0, rows, i * input_territory_size, (i + 1) * input_territory_size);
 
-                this.W_territory
-                        .setGradient(this.W_territory.getGradient().add(slice_in.transpose().matmul(dLoss_dSliceOut)));
-                this.b_territory.setGradient(this.b_territory.getGradient().add(dLoss_dSliceOut.sum(0)));
+                Matrix dW = slice_in.transpose().matmul(dLoss_dSliceOut);
+                for (int r = 0; r < gradW.getShape().numRows(); r++) {
+                    for (int c = 0; c < gradW.getShape().numCols(); c++) {
+                        gradW.set(r, c, gradW.get(r, c) + dW.get(r, c));
+                    }
+                }
+
+                Matrix dB = dLoss_dSliceOut.sum(0);
+                for (int c = 0; c < gradB.getShape().numCols(); c++) {
+                    gradB.set(0, c, gradB.get(0, c) + dB.get(0, c));
+                }
 
                 Matrix dLoss_dSliceIn = dLoss_dSliceOut.matmul(this.W_territory.getValue().transpose());
                 dLoss_dX.copySlice(0, rows, i * input_territory_size, (i + 1) * input_territory_size, dLoss_dSliceIn);
             }
 
             return dLoss_dX;
-        }
-
-        private Matrix concatCols(Matrix A, Matrix B) {
-            int rows = A.getShape().numRows();
-            int colsA = A.getShape().numCols();
-            int colsB = B.getShape().numCols();
-            Matrix out = Matrix.zeros(rows, colsA + colsB);
-            out.copySlice(0, rows, 0, colsA, A);
-            out.copySlice(0, rows, colsA, colsA + colsB, B);
-            return out;
         }
 
         public List<Parameter> getParameters() {
@@ -715,8 +721,11 @@ public class RiskQAgent
             Matrix out = Matrix.zeros(rows, vectorDim);
 
             for (int i = 0; i < numVectors; i++) {
-                Matrix slice = X.getSlice(0, rows, i * vectorDim, (i + 1) * vectorDim);
-                out = out.add(slice);
+                for (int r = 0; r < rows; r++) {
+                    for (int c = 0; c < vectorDim; c++) {
+                        out.set(r, c, out.get(r, c) + X.get(r, i * vectorDim + c));
+                    }
+                }
             }
 
             return out;
@@ -944,14 +953,17 @@ public class RiskQAgent
         }
 
         public Matrix forward(Matrix X) throws Exception {
-            // System.out.println("Forwards");
-
             int rows = X.getShape().numRows();
             Matrix[] H = new Matrix[NUM_TERRITORIES];
 
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 Matrix slice = X.getSlice(0, rows, i * in_features, (i + 1) * in_features);
-                H[i] = slice.matmul(W.getValue()).add(b.getValue());
+                H[i] = slice.matmul(W.getValue());
+                for (int r = 0; r < rows; r++) {
+                    for (int c = 0; c < out_features; c++) {
+                        H[i].set(r, c, H[i].get(r, c) + b.getValue().get(0, c));
+                    }
+                }
             }
 
             Matrix out = Matrix.zeros(rows, NUM_TERRITORIES * out_features);
@@ -970,8 +982,6 @@ public class RiskQAgent
         }
 
         public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
-            System.out.println("Backwards");
-
             int rows = X.getShape().numRows();
             Matrix dLoss_dX = Matrix.zeros(rows, NUM_TERRITORIES * in_features);
 
@@ -990,11 +1000,23 @@ public class RiskQAgent
                 }
             }
 
+            Matrix gradW = this.W.getGradient();
+            Matrix gradB = this.b.getGradient();
+
             for (int i = 0; i < NUM_TERRITORIES; i++) {
                 Matrix slice_in = X.getSlice(0, rows, i * in_features, (i + 1) * in_features);
 
-                this.W.setGradient(this.W.getGradient().add(slice_in.transpose().matmul(dH[i])));
-                this.b.setGradient(this.b.getGradient().add(dH[i].sum(0)));
+                Matrix dW = slice_in.transpose().matmul(dH[i]);
+                for (int r = 0; r < gradW.getShape().numRows(); r++) {
+                    for (int c = 0; c < gradW.getShape().numCols(); c++) {
+                        gradW.set(r, c, gradW.get(r, c) + dW.get(r, c));
+                    }
+                }
+
+                Matrix dB = dH[i].sum(0);
+                for (int c = 0; c < gradB.getShape().numCols(); c++) {
+                    gradB.set(0, c, gradB.get(0, c) + dB.get(0, c));
+                }
 
                 Matrix dLoss_dSliceIn = dH[i].matmul(this.W.getValue().transpose());
                 dLoss_dX.copySlice(0, rows, i * in_features, (i + 1) * in_features, dLoss_dSliceIn);
