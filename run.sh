@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#$ -N train_v1
+#$ -N train_v3_against_random
 #$ -l h_rt=10:00:00
 #$ -pe omp 2
 #$ -l mem_per_core=8G
