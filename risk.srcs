@@ -9,3 +9,4 @@ src/pas/risk/senses/MyStateSensorArray.java
 
 # agent
 src/pas/risk/agent/RiskQAgent.java
+src/pas/risk/agent/HeuristicAgent.java
