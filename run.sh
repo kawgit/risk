@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#$ -N train_v1
+#$ -N train_v3_against_random
 #$ -l h_rt=10:00:00
 #$ -pe omp 2
 #$ -l mem_per_core=8G
@@ -16,4 +16,4 @@ javac -cp "./lib/*:src" @risk.srcs || {
 }
 
 # Train
-java -cp "./lib/*:src" edu.bu.pas.risk.SequentialTrain pas.risk.agent.RiskQAgent random -x 100 -g .9 -t 100 -v 10 2>&1 | awk '{ print strftime("[%Y-%m-%d %H:%M:%S]"), $0 }'
+java -ea -cp "./lib/*:src" edu.bu.pas.risk.SequentialTrain pas.risk.agent.RiskQAgent random -x 100 -g .99 -t 100 -v 10 -c 10000000000000000 2>&1
