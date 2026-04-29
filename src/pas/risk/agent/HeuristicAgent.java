@@ -28,7 +28,6 @@ public class HeuristicAgent extends RiskQAgent {
         double[] logits = new double[options.size()];
         for (int i = 0; i < options.size(); i++) {
             logits[i] = biasFunc.apply(game, options.get(i), this.agentId());
-            System.out.println("Bias of " + logits[i] + " for action " + options.get(i));
         }
 
         return this.chooseRandomWithLogits(options, logits, 0.01);
@@ -80,26 +79,26 @@ public class HeuristicAgent extends RiskQAgent {
         return true;
     }
 
-    private static int lastPrintedTurn = -1;
-    private static int lastPrintedAgentIdx = -1;
+    // private static int lastPrintedTurn = -1;
+    // private static int lastPrintedAgentIdx = -1;
 
-    @Override
-    public void onTurnEnd(GameView game, int agentIdx) {
-        super.onTurnEnd(game, agentIdx);
+    // @Override
+    // public void onTurnEnd(GameView game, int agentIdx) {
+    //     super.onTurnEnd(game, agentIdx);
 
-        int currentTurn = game.getNumTurns();
-        if (currentTurn != lastPrintedTurn || agentIdx != lastPrintedAgentIdx) {
-            lastPrintedTurn = currentTurn;
-            lastPrintedAgentIdx = agentIdx;
+    //     int currentTurn = game.getNumTurns();
+    //     if (currentTurn != lastPrintedTurn || agentIdx != lastPrintedAgentIdx) {
+    //         lastPrintedTurn = currentTurn;
+    //         lastPrintedAgentIdx = agentIdx;
 
-            System.out.println("--- Army counts after Agent " + agentIdx + "'s turn ---");
-            for (int i = 0; i < game.getNumAgents(); i++) {
-                int totalArmies = 0;
-                for (Territory t : game.getTerritoriesOwnedBy(i)) {
-                    totalArmies += game.getTerritoryOwners().getById(t.id()).getArmies();
-                }
-                System.out.println("Agent " + i + ": " + totalArmies + " armies");
-            }
-        }
-    }
+    //         System.out.println("--- Army counts after Agent " + agentIdx + "'s turn ---");
+    //         for (int i = 0; i < game.getNumAgents(); i++) {
+    //             int totalArmies = 0;
+    //             for (Territory t : game.getTerritoriesOwnedBy(i)) {
+    //                 totalArmies += game.getTerritoryOwners().getById(t.id()).getArmies();
+    //             }
+    //             System.out.println("Agent " + i + ": " + totalArmies + " armies");
+    //         }
+    //     }
+    // }
 }
