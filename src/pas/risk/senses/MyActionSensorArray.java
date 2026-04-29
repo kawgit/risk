@@ -1,5 +1,7 @@
 package pas.risk.senses;
 
+import java.util.Set;
+
 import edu.bu.jmat.Matrix;
 import edu.bu.pas.risk.GameView;
 import edu.bu.pas.risk.TerritoryOwnerView;
@@ -114,11 +116,18 @@ public class MyActionSensorArray extends ActionSensorArray {
             assert offset == (territoryId + 1) * NUM_FEATURES_PER_TERRITORY;
         }
 
+        result.set(0, NUM_FEATURES - 1, getBias(state, action, this.getAgentId()));
+
+        return result;
+    }
+
+    public static double getBias(GameView state, Action action, int agentId) {
         // Bias calculation for actions should encode the expected deviation of future
         // state rewards from current state reward
 
         double bias = 0;
-        if (isAttack) {
+        if (action instanceof AttackAction) {
+            AttackAction attack = (AttackAction) action;
             // bonus for choosing greedily beneficial attacks
             final double[][] expectedNetChange = {
                     // 1 Def // 2 Def
@@ -137,16 +146,15 @@ public class MyActionSensorArray extends ActionSensorArray {
 
             bias += expectedNetChange[attackers - 1][defenders - 1];
 
-            // penalty for concentration change if attack succeeds
-            int movingArmies = attack.movingArmies();
+            // small bonus for keeping forces together
+
             int fromArmies = state.getTerritoryOwners().getById(attack.from().id()).getArmies();
+            int movingArmies = attack.movingArmies();
 
-            double worstScore = 2 * Math.pow(fromArmies / 2, 1.2);
-            double newScore = Math.pow(fromArmies - movingArmies, 1.2) + Math.pow(movingArmies, 1.2);
+            bias += (movingArmies == fromArmies - 1 || movingArmies == 1) ? 0.05 : 0;
 
-            bias += newScore - worstScore;
-
-        } else if (isFortify) {
+        } else if (action instanceof FortifyAction) {
+            FortifyAction fortify = (FortifyAction) action;
             // bonus for increasing concentration of forces
             TerritoryOwnerView fromView = state.getTerritoryOwners().getById(fortify.from().id());
             TerritoryOwnerView toView = state.getTerritoryOwners().getById(fortify.to().id());
@@ -160,15 +168,34 @@ public class MyActionSensorArray extends ActionSensorArray {
             double oldScore = Math.pow(oldFromArmies, 1.2) + Math.pow(oldToArmies, 1.2);
             double newScore = Math.pow(newFromArmies, 1.2) + Math.pow(newToArmies, 1.2);
 
-            bias = newScore - oldScore;
-        } else if (isRedeem) {
+            bias += newScore - oldScore;
+
+            // small bonus for reinforcing borders
+            boolean anyAdjacentEnemy = false;
+            for (Territory t : fortify.to().adjacentTerritories()) {
+                TerritoryOwnerView tView = state.getTerritoryOwners().getById(t.id());
+                if (tView.getOwner() != agentId) {
+                    anyAdjacentEnemy = true;
+                    break;
+                }
+            }
+            bias += anyAdjacentEnemy ? 0.05 : 0;
+
+        } else if (action instanceof RedeemCardsAction) {
+            RedeemCardsAction redeem = (RedeemCardsAction) action;
+            Set<Integer> cardIds = Set.of(
+                    redeem.card1().isWild() ? -1 : redeem.card1().territory().id(),
+                    redeem.card2().isWild() ? -1 : redeem.card2().territory().id(),
+                    redeem.card3().isWild() ? -1 : redeem.card3().territory().id());
             // bonus for redemption amount
-            bias = redemptionAmount;
+            int redemptionCount = 1 + state.getNumPreviousRedemptions();
+            int redemptionAmount = TerritoryCard.getRedemptionAmount(redemptionCount)
+                    + (int) (state.getTerritoriesOwnedBy(agentId).stream().filter(t -> cardIds.contains(t.id())).count()
+                            * 2);
+            bias += redemptionAmount;
         }
 
-        result.set(0, NUM_FEATURES - 1, bias);
-
-        return result;
+        return bias;
     }
 
     private static int encodeCount(Matrix result, int offset, int num_bins, int count, boolean log_scale) {

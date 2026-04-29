@@ -43,6 +43,12 @@ public class MyPlacementSensorArray
             }
         }
 
+        result.set(0, NUM_FEATURES - 1, getBias(state, territory, this.getAgentId()));
+
+        return result;
+    }
+
+    public static double getBias(GameView state, Territory territory, int agentId) {
         double bias = 1;
         int oldArmyCount = state.getTerritoryOwners().getById(territory.id()).getArmies();
         int newArmyCount = oldArmyCount + 1;
@@ -53,9 +59,7 @@ public class MyPlacementSensorArray
 
         bias += newScore - oldScore;
 
-        result.set(0, NUM_FEATURES - 1, bias);
-
-        return result;
+        return bias;
     }
 
 }

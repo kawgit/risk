@@ -9,6 +9,7 @@ import edu.bu.jnn.models.Sequential;
 import edu.bu.jnn.Module;
 import edu.bu.jnn.Parameter;
 import edu.bu.pas.risk.action.Action;
+import edu.bu.pas.risk.action.AttackAction;
 import edu.bu.pas.risk.agent.NeuralQAgent;
 import edu.bu.pas.risk.agent.rewards.RewardFunction;
 import edu.bu.pas.risk.agent.senses.*;
@@ -60,6 +61,8 @@ public class RiskQAgent
         extends NeuralQAgent {
 
     private final double EPSILON = 1.0;
+    private final double FILTER_FOR_BIASED_CHANCE = 1.0;
+    private final double FORCE_NO_REDEEM_CHANCE = 0.2;
     private Random rng;
 
     public RiskQAgent(int agentId) {
@@ -213,9 +216,10 @@ public class RiskQAgent
             expLogits[i] /= sum;
         }
 
-        System.out.println(
-                "expLogits: "
-                        + Arrays.toString(Arrays.stream(expLogits).map(a -> Math.round(a * 100) / 100.0).toArray()));
+        // System.out.println(
+        // "expLogits: "
+        // + Arrays.toString(Arrays.stream(expLogits).map(a -> Math.round(a * 100) /
+        // 100.0).toArray()));
 
         double threshold = this.rng.nextDouble();
         double cumulative = 0.0;
@@ -233,6 +237,11 @@ public class RiskQAgent
     @FunctionalInterface
     public interface ModelForward {
         Matrix apply(Matrix stateFeatures, Matrix itemFeatures) throws Exception;
+    }
+
+    @FunctionalInterface
+    public interface BiasFunction<T> {
+        double apply(GameView state, T option, int agentId);
     }
 
     public <T> T chooseRandomWithModelSoftmax(final GameView game,
@@ -263,6 +272,76 @@ public class RiskQAgent
         return chooseRandomWithLogits(options, logits, temperature);
     }
 
+    public <T> List<T> filterTopPBasedOnBias(final GameView game,
+            final List<T> options,
+            final BiasFunction<T> biasFunction,
+            double temperature) {
+
+        temperature /= 150;
+
+        assert !options.isEmpty() : "Options must be non-empty.";
+
+        if (options.size() == 1) {
+            return new ArrayList<>(options);
+        }
+
+        int agentId = this.agentId();
+        double[] scaledLogits = new double[options.size()];
+        double maxLogit = Double.NEGATIVE_INFINITY;
+
+        for (int i = 0; i < options.size(); i++) {
+            double logit = biasFunction.apply(game, options.get(i), agentId) + Math.random() * 0.00001;
+            double scaledLogit = (temperature == 0.0) ? logit : logit / temperature;
+            scaledLogits[i] = scaledLogit;
+            if (scaledLogit > maxLogit) {
+                maxLogit = scaledLogit;
+            }
+        }
+
+        if (temperature == 0.0) {
+            int bestIndex = 0;
+            for (int i = 0; i < scaledLogits.length; i++) {
+                if (scaledLogits[i] == maxLogit)
+                    bestIndex = i;
+            }
+            List<T> result = new ArrayList<>();
+            result.add(options.get(bestIndex));
+            return result;
+        }
+
+        double sumExp = 0.0;
+        double[] probabilities = new double[options.size()];
+        for (int i = 0; i < scaledLogits.length; i++) {
+            probabilities[i] = Math.exp(scaledLogits[i] - maxLogit);
+            sumExp += probabilities[i];
+        }
+
+        for (int i = 0; i < probabilities.length; i++) {
+            probabilities[i] /= sumExp;
+        }
+
+        List<Integer> sortedIndices = new ArrayList<>(options.size());
+        for (int i = 0; i < options.size(); i++) {
+            sortedIndices.add(i);
+        }
+
+        sortedIndices.sort((i, j) -> Double.compare(probabilities[j], probabilities[i]));
+
+        double topP = 0.95;
+        double cumulativeProb = 0.0;
+        List<T> filteredOptions = new ArrayList<>();
+
+        for (int index : sortedIndices) {
+            filteredOptions.add(options.get(index));
+            cumulativeProb += probabilities[index];
+            if (cumulativeProb >= topP) {
+                break;
+            }
+        }
+
+        return filteredOptions;
+    }
+
     /**
      * A method to choose an {@link Action} when it is in the redeem phase of a
      * turn. You are free to write your own
@@ -278,7 +357,7 @@ public class RiskQAgent
     public Action getExplorationRedeemAction(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        System.out.println("getExplorationRedeemAction");
+        // System.out.println("getExplorationRedeemAction");
         final List<Action> options = this.getRedeemActions(game, actionCounter, canRedeemCards,
                 game.getAgentInventory(this.agentId()).size() < 5);
         List<Matrix> features = options.stream()
@@ -322,13 +401,24 @@ public class RiskQAgent
     public Action getExplorationAttackActionRedeemIfForced(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        System.out.println("getExplorationAttackActionRedeemIfForced");
-        final List<Action> options = this.getAttackRedeemActions(game, actionCounter, canRedeemCards);
+        // System.out.println("getExplorationAttackActionRedeemIfForced");
+        final double temperature = 1.0;
+        List<Action> options = this.getAttackRedeemActions(game, actionCounter, canRedeemCards);
+        if (Math.random() < FORCE_NO_REDEEM_CHANCE) {
+            final List<Action> newOptions = options.stream().filter(action -> action instanceof AttackAction)
+                    .toList();
+            if (!newOptions.isEmpty()) {
+                options = newOptions;
+            }
+        }
+        if (Math.random() < FILTER_FOR_BIASED_CHANCE) {
+            options = filterTopPBasedOnBias(game, options, MyActionSensorArray::getBias, temperature);
+        }
         List<Matrix> features = options.stream()
                 .map(action -> this.getActionFeatureVector(game, actionCounter, action))
                 .toList();
         return this.chooseRandomWithModelSoftmax(game, options, features,
-                this.getModel()::actionForward, 5.0);
+                this.getModel()::actionForward, temperature);
     }
 
     /**
@@ -366,13 +456,17 @@ public class RiskQAgent
     public Action getExplorationFortifySkipAction(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        System.out.println("getExplorationFortifySkipAction");
-        final List<Action> options = this.getFortifyActions(game, actionCounter, canRedeemCards);
+        // System.out.println("getExplorationFortifySkipAction");
+        final double temperature = 1.0;
+        List<Action> options = this.getFortifyActions(game, actionCounter, canRedeemCards);
+        if (Math.random() < FILTER_FOR_BIASED_CHANCE) {
+            options = filterTopPBasedOnBias(game, options, MyActionSensorArray::getBias, temperature);
+        }
         List<Matrix> features = options.stream()
                 .map(action -> this.getActionFeatureVector(game, actionCounter, action))
                 .toList();
         return this.chooseRandomWithModelSoftmax(game, options, features,
-                this.getModel()::actionForward, 1.0);
+                this.getModel()::actionForward, temperature);
     }
 
     /**
@@ -411,14 +505,17 @@ public class RiskQAgent
     public Territory getExplorationPlacement(final GameView game,
             final boolean isDuringSetup,
             final int remainingArmies) {
-        System.out.println("getExplorationPlacement");
-        final List<Territory> options = this.getPotentialPlacements(game, isDuringSetup, remainingArmies);
+        // System.out.println("getExplorationPlacement");
+        final double temperature = 5.0;
+        List<Territory> options = this.getPotentialPlacements(game, isDuringSetup, remainingArmies);
+        if (Math.random() < FILTER_FOR_BIASED_CHANCE) {
+            options = filterTopPBasedOnBias(game, options, MyPlacementSensorArray::getBias, temperature);
+        }
         List<Matrix> features = options.stream()
                 .map(option -> this.getPlacementFeatureVector(game, remainingArmies, option))
                 .toList();
         return this.chooseRandomWithModelSoftmax(game, options, features,
-                this.getModel()::placementForward, 5);
-
+                this.getModel()::placementForward, temperature);
     }
 
     /**
