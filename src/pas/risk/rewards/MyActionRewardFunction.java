@@ -48,8 +48,7 @@ public class MyActionRewardFunction
         for (TerritoryOwnerView view : state.getTerritoryOwners()) {
             armyDifference += Math.pow(view.getArmies(), 1.2) * (view.getOwner() == this.getAgentId() ? 1 : -1);
         }
-        double reward = armyDifference / 1000;
-        return Math.max(this.getLowerBound(), Math.min(this.getUpperBound(), reward));
+        return Math.max(-1000, Math.min(1000, armyDifference));
     }
 
     /** {@inheritDoc} */

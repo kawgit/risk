@@ -47,11 +47,6 @@ public class MyPlacementSensorArray
         int oldArmyCount = state.getTerritoryOwners().getById(territory.id()).getArmies();
         int newArmyCount = oldArmyCount + 1;
 
-        // bonus for picking unclaimed territory
-        // if (oldArmyCount == 0) {
-        // bias += 5;
-        // }
-
         // bonus for increasing concentration of forces
         double oldScore = Math.pow(oldArmyCount, 1.2);
         double newScore = Math.pow(newArmyCount, 1.2);

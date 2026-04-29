@@ -59,7 +59,7 @@ import pas.risk.senses.MyStateSensorArray;
 public class RiskQAgent
         extends NeuralQAgent {
 
-    private final double EPSILON = 0.3;
+    private final double EPSILON = 1.0;
     private Random rng;
 
     public RiskQAgent(int agentId) {
@@ -191,10 +191,6 @@ public class RiskQAgent
         return list.get(this.rng.nextInt(list.size()));
     }
 
-    public <T> T chooseRandomWithLogits(final List<T> list, final double[] logits) {
-        return chooseRandomWithLogits(list, logits, 1);
-    }
-
     public <T> T chooseRandomWithLogits(final List<T> list, final double[] logits, final double temperature) {
         assert list.size() == logits.length || logits.length == 0
                 : "List size must match logits length, or logits must be empty.";
@@ -217,6 +213,10 @@ public class RiskQAgent
             expLogits[i] /= sum;
         }
 
+        System.out.println(
+                "expLogits: "
+                        + Arrays.toString(Arrays.stream(expLogits).map(a -> Math.round(a * 100) / 100.0).toArray()));
+
         double threshold = this.rng.nextDouble();
         double cumulative = 0.0;
 
@@ -238,9 +238,14 @@ public class RiskQAgent
     public <T> T chooseRandomWithModelSoftmax(final GameView game,
             final List<T> options,
             final List<Matrix> featureVectors,
-            final ModelForward modelCall) {
+            final ModelForward modelCall,
+            final double temperature) {
         assert !options.isEmpty() && options.size() == featureVectors.size()
                 : "Options and features must be non-empty and matching in size.";
+
+        if (options.size() == 1) {
+            return options.get(0);
+        }
 
         final Matrix stateFeatures = this.getStateFeatureVector(game);
         double[] logits = new double[options.size()];
@@ -255,7 +260,7 @@ public class RiskQAgent
             }
         }
 
-        return chooseRandomWithLogits(options, logits);
+        return chooseRandomWithLogits(options, logits, temperature);
     }
 
     /**
@@ -273,13 +278,14 @@ public class RiskQAgent
     public Action getExplorationRedeemAction(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
+        System.out.println("getExplorationRedeemAction");
         final List<Action> options = this.getRedeemActions(game, actionCounter, canRedeemCards,
                 game.getAgentInventory(this.agentId()).size() < 5);
         List<Matrix> features = options.stream()
                 .map(action -> this.getActionFeatureVector(game, actionCounter, action))
                 .toList();
         return this.chooseRandomWithModelSoftmax(game, options, features,
-                this.getModel()::actionForward);
+                this.getModel()::actionForward, 1.0);
     }
 
     /**
@@ -316,12 +322,13 @@ public class RiskQAgent
     public Action getExplorationAttackActionRedeemIfForced(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
+        System.out.println("getExplorationAttackActionRedeemIfForced");
         final List<Action> options = this.getAttackRedeemActions(game, actionCounter, canRedeemCards);
         List<Matrix> features = options.stream()
                 .map(action -> this.getActionFeatureVector(game, actionCounter, action))
                 .toList();
         return this.chooseRandomWithModelSoftmax(game, options, features,
-                this.getModel()::actionForward);
+                this.getModel()::actionForward, 5.0);
     }
 
     /**
@@ -359,12 +366,13 @@ public class RiskQAgent
     public Action getExplorationFortifySkipAction(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
+        System.out.println("getExplorationFortifySkipAction");
         final List<Action> options = this.getFortifyActions(game, actionCounter, canRedeemCards);
         List<Matrix> features = options.stream()
                 .map(action -> this.getActionFeatureVector(game, actionCounter, action))
                 .toList();
         return this.chooseRandomWithModelSoftmax(game, options, features,
-                this.getModel()::actionForward);
+                this.getModel()::actionForward, 1.0);
     }
 
     /**
@@ -403,12 +411,13 @@ public class RiskQAgent
     public Territory getExplorationPlacement(final GameView game,
             final boolean isDuringSetup,
             final int remainingArmies) {
+        System.out.println("getExplorationPlacement");
         final List<Territory> options = this.getPotentialPlacements(game, isDuringSetup, remainingArmies);
         List<Matrix> features = options.stream()
                 .map(option -> this.getPlacementFeatureVector(game, remainingArmies, option))
                 .toList();
         return this.chooseRandomWithModelSoftmax(game, options, features,
-                this.getModel()::placementForward);
+                this.getModel()::placementForward, 5);
 
     }
 
@@ -1177,9 +1186,10 @@ public class RiskQAgent
                     this.W.getValue().set(r, c, -bound + (2 * bound) * rng.nextDouble());
                 }
             }
-            // Initialize bias scaling to 10
+
+            // Initialize bias scaling to 100.0
             for (int c = 0; c < out_features; c++) {
-                this.W.getValue().set(in_features, c, 1.0);
+                this.W.getValue().set(in_features, c, 150.0);
             }
 
             this.numForwardPasses = 0;
@@ -1214,6 +1224,32 @@ public class RiskQAgent
 
         public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
             this.numBackwardsPasses++;
+
+            if (Math.random() * 100 < 1) {
+                double networkContribution = 0.0;
+                for (int c = 0; c < in_features; c++) {
+                    networkContribution += X.get(0, c) * W.getValue().get(c, 0);
+                }
+                networkContribution += b.getValue().get(0, 0);
+
+                double biasContribution = X.get(0, in_features) *
+                        W.getValue().get(in_features, 0);
+                double output0 = networkContribution + biasContribution;
+                // MSE loss in the framework computes dL/dy = (y_pred - y_true) / N
+                // So y_true = y_pred - dL/dy * N
+                double estimatedGroundTruth = output0 - (dLoss_dModule.get(0, 0) *
+                        X.getShape().numRows());
+
+                System.out.println(" --- --- --- --- --- --- ");
+                System.out.println("numForwardPasses: " + numForwardPasses);
+                System.out.println("numBackwardsPasses: " + numBackwardsPasses);
+                System.out.println("bias: " + X.get(0, in_features));
+                System.out.println("networkContribution: " + networkContribution);
+                System.out.println("biasWeight: " + W.getValue().get(in_features, 0));
+                System.out.println("biasContribution: " + biasContribution);
+                System.out.println("output: " + output0);
+                System.out.println("estimatedGroundTruth: " + estimatedGroundTruth);
+            }
 
             assert X.getShape().numCols() == in_features + 1;
             assert dLoss_dModule.getShape().numCols() == out_features;

@@ -135,7 +135,17 @@ public class MyActionSensorArray extends ActionSensorArray {
             assert attackers >= 1 && attackers <= 3;
             assert defenders >= 1 && defenders <= 2;
 
-            bias = expectedNetChange[attackers - 1][defenders - 1];
+            bias += expectedNetChange[attackers - 1][defenders - 1];
+
+            // penalty for concentration change if attack succeeds
+            int movingArmies = attack.movingArmies();
+            int fromArmies = state.getTerritoryOwners().getById(attack.from().id()).getArmies();
+
+            double worstScore = 2 * Math.pow(fromArmies / 2, 1.2);
+            double newScore = Math.pow(fromArmies - movingArmies, 1.2) + Math.pow(movingArmies, 1.2);
+
+            bias += newScore - worstScore;
+
         } else if (isFortify) {
             // bonus for increasing concentration of forces
             TerritoryOwnerView fromView = state.getTerritoryOwners().getById(fortify.from().id());
