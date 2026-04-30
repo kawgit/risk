@@ -151,7 +151,7 @@ public class MyActionSensorArray extends ActionSensorArray {
             int fromArmies = state.getTerritoryOwners().getById(attack.from().id()).getArmies();
             int movingArmies = attack.movingArmies();
 
-            bias += (movingArmies == fromArmies - 1 || movingArmies == 1) ? 0.05 : 0;
+            bias += movingArmies == fromArmies - 1 ? 0.05 : 0;
 
         } else if (action instanceof FortifyAction) {
             FortifyAction fortify = (FortifyAction) action;
