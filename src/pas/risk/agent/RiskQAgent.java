@@ -66,12 +66,14 @@ public class RiskQAgent
     private final double FILTER_FOR_BIASED_CHANCE = 1.0;
     private final double FORCE_NO_REDEEM_CHANCE = 0.2;
     private Random rng;
-    private Deque<Integer> results;
+    private Deque<Integer> recentResults;
+    private Deque<Integer> recentLengths;
 
     public RiskQAgent(int agentId) {
         super(agentId);
         this.rng = new Random();
-        this.results = new LinkedList<>();
+        this.recentResults = new LinkedList<>();
+        this.recentLengths = new LinkedList<>();
     }
 
     /**
@@ -1210,16 +1212,14 @@ public class RiskQAgent
     }
 
     private static int lastPrintedTurn = -1;
-    private static int lastPrintedAgentIdx = -1;
 
     @Override
     public void onTurnEnd(GameView game, int agentIdx) {
         super.onTurnEnd(game, agentIdx);
 
         int currentTurn = game.getNumTurns();
-        if (currentTurn != lastPrintedTurn || agentIdx != lastPrintedAgentIdx) {
+        if (currentTurn != lastPrintedTurn) {
             lastPrintedTurn = currentTurn;
-            lastPrintedAgentIdx = agentIdx;
 
             // System.out.println("--- After turn " + currentTurn + "---");
             // System.out.println("Reward: " +
@@ -1235,21 +1235,31 @@ public class RiskQAgent
             if (game.isOver()) {
                 if (!game.getTerritoriesOwnedBy(this.agentId()).isEmpty()) {
                     System.out.println("WIN");
-                    results.add(1);
+                    recentResults.add(1);
+                    recentLengths.add(currentTurn);
                 } else {
                     System.out.println("LOSS");
-                    results.add(0);
+                    recentResults.add(0);
+                    recentLengths.add(currentTurn);
                 }
 
-                if (results.size() == 51) {
-                    results.poll();
+                if (recentResults.size() == 51) {
+                    recentResults.poll();
+                    recentLengths.poll();
                 }
 
-                double sum = 0;
-                for (Integer result : results) {
-                    sum += result;
+                double sumResults = 0;
+                for (Integer result : recentResults) {
+                    sumResults += result;
                 }
-                System.out.println("Win rate over last " + results.size() + " games: " + sum / results.size());
+                double sumLengths = 0;
+                for (Integer length : recentLengths) {
+                    sumLengths += length;
+                }
+                System.out.println("Over the last " + recentResults.size() + " games...");
+                System.out.println("Win rate: " + sumResults / recentResults.size());
+                System.out.println("Average game length: " + sumLengths / recentLengths.size());
+                System.out.println();
             }
         }
 

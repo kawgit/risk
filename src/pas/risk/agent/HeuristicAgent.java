@@ -78,4 +78,8 @@ public class HeuristicAgent extends RiskQAgent {
     public boolean shouldExplorePlacementPhase(GameView game, boolean isDuringSetup, int remainingArmies) {
         return true;
     }
+
+    @Override
+    public void onTurnEnd(GameView game, int agentIdx) {
+    }
 }
