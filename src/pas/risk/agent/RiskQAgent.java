@@ -66,10 +66,12 @@ public class RiskQAgent
     private final double FILTER_FOR_BIASED_CHANCE = 1.0;
     private final double FORCE_NO_REDEEM_CHANCE = 0.2;
     private Random rng;
+    private Deque<Integer> results;
 
     public RiskQAgent(int agentId) {
         super(agentId);
         this.rng = new Random();
+        this.results = new LinkedList<>();
     }
 
     /**
@@ -1219,23 +1221,37 @@ public class RiskQAgent
             lastPrintedTurn = currentTurn;
             lastPrintedAgentIdx = agentIdx;
 
-            System.out.println("--- After turn " + currentTurn + "---");
-            System.out.println("Reward: " + this.getActionRewardFunction().getStateReward(game));
-            for (int i = 0; i < game.getNumAgents(); i++) {
-                int totalArmies = 0;
-                for (Territory t : game.getTerritoriesOwnedBy(i)) {
-                    totalArmies += game.getTerritoryOwners().getById(t.id()).getArmies();
-                }
-                System.out.println("Agent " + i + ": " + totalArmies + " armies");
-            }
+            // System.out.println("--- After turn " + currentTurn + "---");
+            // System.out.println("Reward: " +
+            // this.getActionRewardFunction().getStateReward(game));
+            // for (int i = 0; i < game.getNumAgents(); i++) {
+            // int totalArmies = 0;
+            // for (Territory t : game.getTerritoriesOwnedBy(i)) {
+            // totalArmies += game.getTerritoryOwners().getById(t.id()).getArmies();
+            // }
+            // System.out.println("Agent " + i + ": " + totalArmies + " armies");
+            // }
 
             if (game.isOver()) {
                 if (!game.getTerritoriesOwnedBy(this.agentId()).isEmpty()) {
                     System.out.println("WIN");
+                    results.add(1);
                 } else {
                     System.out.println("LOSS");
+                    results.add(0);
                 }
+
+                if (results.size() == 51) {
+                    results.poll();
+                }
+
+                double sum = 0;
+                for (Integer result : results) {
+                    sum += result;
+                }
+                System.out.println("Win rate over last " + results.size() + " games: " + sum / results.size());
             }
         }
+
     }
 }
