@@ -8,6 +8,8 @@ import edu.bu.jmat.Matrix;
 import edu.bu.jnn.models.Sequential;
 import edu.bu.jnn.Module;
 import edu.bu.jnn.Parameter;
+import edu.bu.jnn.layers.Dense;
+import edu.bu.jnn.layers.ReLU;
 import edu.bu.pas.risk.action.Action;
 import edu.bu.pas.risk.action.AttackAction;
 import edu.bu.pas.risk.agent.NeuralQAgent;
@@ -111,7 +113,9 @@ public class RiskQAgent
         actionDecoder.add(new HackyPassThroughReLU());
         actionDecoder.add(new HackyReduceSum(hiddenTerritoryDim));
         actionDecoder.add(new HackyRMSNorm());
-        actionDecoder.add(new HackyPassThroughDense(hiddenTerritoryDim, 1));
+        actionDecoder.add(new Dense(hiddenTerritoryDim + 1, hiddenTerritoryDim));
+        actionDecoder.add(new ReLU());
+        actionDecoder.add(new Dense(hiddenTerritoryDim, 1));
 
         // placement decoder
         Sequential placementDecoder = new Sequential();
@@ -128,7 +132,9 @@ public class RiskQAgent
         placementDecoder.add(new HackyPassThroughReLU());
         placementDecoder.add(new HackyReduceSum(hiddenTerritoryDim));
         placementDecoder.add(new HackyRMSNorm());
-        placementDecoder.add(new HackyPassThroughDense(hiddenTerritoryDim, 1));
+        placementDecoder.add(new Dense(hiddenTerritoryDim + 1, hiddenTerritoryDim));
+        placementDecoder.add(new ReLU());
+        placementDecoder.add(new Dense(hiddenTerritoryDim, 1));
 
         var model = new DualDecoderModel(encoder, actionDecoder, placementDecoder);
         // try {
@@ -937,131 +943,89 @@ public class RiskQAgent
 
         public static final int[][] ADJACENCY_MATRIX = new int[][] {
                 { 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 1, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
                 { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0,
-                        1, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0,
-                        1, 0, 0,
-                        1, 0, 0, 0, 0, 0, 0, 0 },
+                        1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
-                        1, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0 },
+                        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
-                        1, 0, 0,
-                        0, 0, 0, 0, 1, 0, 0, 0 },
+                        1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
-                        1, 1, 0,
-                        1, 0, 0, 0, 0, 0, 0, 0 },
+                        1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        1, 1, 1,
-                        1, 1, 0, 1, 0, 0, 0, 0 },
+                        1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 1, 1,
-                        0, 0, 0, 1, 0, 0, 0, 0 },
+                        0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-                        1, 1, 0,
-                        1, 1, 1, 0, 0, 0, 0, 0 },
+                        1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 1, 0,
-                        1, 1, 1, 1, 0, 0, 0, 0 },
+                        0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        1, 1, 1, 1, 0, 0, 0, 0 },
+                        0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0 },
                 { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 1, 1,
-                        0, 1, 1, 1, 0, 0, 0, 0 },
+                        0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                        0, 0, 0,
-                        0, 0, 0, 0, 1, 1, 1, 0 },
+                        0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 1, 1, 1, 1 },
+                        0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 1, 1, 1, 1 },
+                        0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1 },
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 0, 0, 0, 1, 1, 1 } };
+                        0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 } };
 
         private double[][] A_hat;
 
@@ -1259,131 +1223,35 @@ public class RiskQAgent
         }
     }
 
-    public class HackyPassThroughDense extends Module {
-        private Parameter W;
-        private Parameter b;
-        private final int in_features;
-        private final int out_features;
+    private static int lastPrintedTurn = -1;
+    private static int lastPrintedAgentIdx = -1;
 
-        private int numForwardPasses;
-        private int numBackwardsPasses;
+    @Override
+    public void onTurnEnd(GameView game, int agentIdx) {
+        super.onTurnEnd(game, agentIdx);
 
-        public HackyPassThroughDense(int in_features, int out_features) {
-            this.in_features = in_features;
-            this.out_features = out_features;
+        int currentTurn = game.getNumTurns();
+        if (currentTurn != lastPrintedTurn || agentIdx != lastPrintedAgentIdx) {
+            lastPrintedTurn = currentTurn;
+            lastPrintedAgentIdx = agentIdx;
 
-            Random rng = new Random();
-            double bound = Math.sqrt(1.0 / (double) in_features);
-            this.W = new Parameter(Matrix.zeros(in_features + 1, out_features));
-            this.b = new Parameter(Matrix.zeros(1, out_features));
+            System.out.println("--- After turn " + currentTurn + "---");
+            System.out.println("Reward: " + this.getActionRewardFunction().getStateReward(game));
+            for (int i = 0; i < game.getNumAgents(); i++) {
+                int totalArmies = 0;
+                for (Territory t : game.getTerritoriesOwnedBy(i)) {
+                    totalArmies += game.getTerritoryOwners().getById(t.id()).getArmies();
+                }
+                System.out.println("Agent " + i + ": " + totalArmies + " armies");
+            }
 
-            // Initialize normal features
-            for (int r = 0; r < in_features; r++) {
-                for (int c = 0; c < out_features; c++) {
-                    this.W.getValue().set(r, c, -bound + (2 * bound) * rng.nextDouble());
+            if (game.isOver()) {
+                if (!game.getTerritoriesOwnedBy(this.agentId()).isEmpty()) {
+                    System.out.println("WIN");
+                } else {
+                    System.out.println("LOSS");
                 }
             }
-
-            // Initialize bias scaling to 100.0
-            for (int c = 0; c < out_features; c++) {
-                this.W.getValue().set(in_features, c, 150.0);
-            }
-
-            this.numForwardPasses = 0;
-            this.numBackwardsPasses = 0;
-
-            initUniform(this.b.getValue(), -bound, bound, rng);
-        }
-
-        private void initUniform(Matrix m, double min, double max, Random rng) {
-            int rows = m.getShape().numRows();
-            int cols = m.getShape().numCols();
-            for (int r = 0; r < rows; r++) {
-                for (int c = 0; c < cols; c++) {
-                    m.set(r, c, min + (max - min) * rng.nextDouble());
-                }
-            }
-        }
-
-        public Matrix forward(Matrix X) throws Exception {
-            this.numForwardPasses++;
-
-            assert X.getShape().numCols() == in_features + 1;
-            int rows = X.getShape().numRows();
-            Matrix out = X.matmul(W.getValue());
-            for (int r = 0; r < rows; r++) {
-                for (int c = 0; c < out_features; c++) {
-                    out.set(r, c, out.get(r, c) + b.getValue().get(0, c));
-                }
-            }
-            return out;
-        }
-
-        public Matrix backwards(Matrix X, Matrix dLoss_dModule) throws Exception {
-            this.numBackwardsPasses++;
-
-            if (Math.random() * 100 < 1) {
-                double networkContribution = 0.0;
-                for (int c = 0; c < in_features; c++) {
-                    networkContribution += X.get(0, c) * W.getValue().get(c, 0);
-                }
-                networkContribution += b.getValue().get(0, 0);
-
-                double biasContribution = X.get(0, in_features) *
-                        W.getValue().get(in_features, 0);
-                double output0 = networkContribution + biasContribution;
-                // MSE loss in the framework computes dL/dy = (y_pred - y_true) / N
-                // So y_true = y_pred - dL/dy * N
-                double estimatedGroundTruth = output0 - (dLoss_dModule.get(0, 0) *
-                        X.getShape().numRows());
-
-                System.out.println(" --- --- --- --- --- --- ");
-                System.out.println("numForwardPasses: " + numForwardPasses);
-                System.out.println("numBackwardsPasses: " + numBackwardsPasses);
-                System.out.println("bias: " + X.get(0, in_features));
-                System.out.println("networkContribution: " + networkContribution);
-                System.out.println("biasWeight: " + W.getValue().get(in_features, 0));
-                System.out.println("biasContribution: " + biasContribution);
-                System.out.println("output: " + output0);
-                System.out.println("estimatedGroundTruth: " + estimatedGroundTruth);
-            }
-
-            assert X.getShape().numCols() == in_features + 1;
-            assert dLoss_dModule.getShape().numCols() == out_features;
-
-            // Sanitize incoming loss gradients from the framework
-            for (int r = 0; r < dLoss_dModule.getShape().numRows(); r++) {
-                for (int c = 0; c < dLoss_dModule.getShape().numCols(); c++) {
-                    double val = dLoss_dModule.get(r, c);
-                    if (Double.isNaN(val) || Double.isInfinite(val) || Math.abs(val) > 10000.0) {
-                        dLoss_dModule.set(r, c, 0.0);
-                    }
-                }
-            }
-
-            Matrix dW = X.transpose().matmul(dLoss_dModule);
-            Matrix gradW = W.getGradient();
-            for (int r = 0; r < gradW.getShape().numRows(); r++) {
-                for (int c = 0; c < gradW.getShape().numCols(); c++) {
-                    gradW.set(r, c, gradW.get(r, c) + dW.get(r, c) + 1e-12);
-                }
-            }
-
-            Matrix dB = dLoss_dModule.sum(0);
-            Matrix gradB = b.getGradient();
-            for (int c = 0; c < gradB.getShape().numCols(); c++) {
-                gradB.set(0, c, gradB.get(0, c) + dB.get(0, c) + 1e-12);
-            }
-
-            return dLoss_dModule.matmul(W.getValue().transpose());
-        }
-
-        public List<Parameter> getParameters() {
-            List<Parameter> params = new ArrayList<>(2);
-            params.add(W);
-            params.add(b);
-            return params;
         }
     }
-
 }

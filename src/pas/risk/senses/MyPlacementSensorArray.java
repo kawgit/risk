@@ -49,7 +49,11 @@ public class MyPlacementSensorArray
     }
 
     public static double getBias(GameView state, Territory territory, int agentId) {
-        double bias = 1;
+        if (state.getTerritoryOwners().getById(territory.id()).isUnclaimed()) {
+            return 0;
+        }
+
+        double bias = 0;
         int oldArmyCount = state.getTerritoryOwners().getById(territory.id()).getArmies();
         int newArmyCount = oldArmyCount + 1;
 

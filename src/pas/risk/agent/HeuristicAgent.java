@@ -78,27 +78,4 @@ public class HeuristicAgent extends RiskQAgent {
     public boolean shouldExplorePlacementPhase(GameView game, boolean isDuringSetup, int remainingArmies) {
         return true;
     }
-
-    // private static int lastPrintedTurn = -1;
-    // private static int lastPrintedAgentIdx = -1;
-
-    // @Override
-    // public void onTurnEnd(GameView game, int agentIdx) {
-    //     super.onTurnEnd(game, agentIdx);
-
-    //     int currentTurn = game.getNumTurns();
-    //     if (currentTurn != lastPrintedTurn || agentIdx != lastPrintedAgentIdx) {
-    //         lastPrintedTurn = currentTurn;
-    //         lastPrintedAgentIdx = agentIdx;
-
-    //         System.out.println("--- Army counts after Agent " + agentIdx + "'s turn ---");
-    //         for (int i = 0; i < game.getNumAgents(); i++) {
-    //             int totalArmies = 0;
-    //             for (Territory t : game.getTerritoriesOwnedBy(i)) {
-    //                 totalArmies += game.getTerritoryOwners().getById(t.id()).getArmies();
-    //             }
-    //             System.out.println("Agent " + i + ": " + totalArmies + " armies");
-    //         }
-    //     }
-    // }
 }

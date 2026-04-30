@@ -30,25 +30,42 @@ import edu.bu.pas.risk.agent.rewards.RewardType;
 public class MyActionRewardFunction
         extends RewardFunction<Action> {
 
+    public static final double RANGE = 100;
+    public static final double FORCE_END_COEFFICIENT = .1;
+
     public MyActionRewardFunction(final int agentId) {
         super(RewardType.STATE, agentId); // change this enum if you don't want to do R(s)
     }
 
     public double getLowerBound() {
-        return -1000;
+        return 2 * -RANGE;
     }
 
     public double getUpperBound() {
-        return 1000;
+        return 2 * RANGE;
     }
 
     /** {@inheritDoc} */
     public double getStateReward(final GameView state) {
-        double armyDifference = 0;
+        double[] armiesPerOwner = new double[state.getNumAgents()];
         for (TerritoryOwnerView view : state.getTerritoryOwners()) {
-            armyDifference += Math.pow(view.getArmies(), 1.2) * (view.getOwner() == this.getAgentId() ? 1 : -1);
+            if (view.isUnclaimed()) {
+                continue;
+            }
+            armiesPerOwner[view.getOwner()] += Math.pow(view.getArmies(), 1.2);
         }
-        return Math.max(-1000, Math.min(1000, armyDifference));
+
+        double ourArmies = armiesPerOwner[this.getAgentId()];
+        double theirArmies = 0;
+        for (int i = 0; i < state.getNumAgents(); i++) {
+            if (i == this.getAgentId())
+                continue;
+            theirArmies = Math.max(theirArmies, armiesPerOwner[i]);
+        }
+
+        double reward = Math.max(-RANGE - FORCE_END_COEFFICIENT * theirArmies,
+                Math.min(RANGE - FORCE_END_COEFFICIENT * theirArmies, ourArmies - theirArmies));
+        return Math.max(getLowerBound(), Math.min(getUpperBound(), reward));
     }
 
     /** {@inheritDoc} */

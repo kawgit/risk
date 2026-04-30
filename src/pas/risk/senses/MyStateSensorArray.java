@@ -12,6 +12,7 @@ import edu.bu.pas.risk.agent.senses.StateSensorArray;
 import edu.bu.pas.risk.territory.Continent;
 import edu.bu.pas.risk.territory.Territory;
 import edu.bu.pas.risk.territory.TerritoryCard;
+import pas.risk.rewards.MyActionRewardFunction;
 
 /**
  * A suite of sensors to convert a {@link GameView} into a feature vector (must
@@ -50,8 +51,11 @@ public class MyStateSensorArray
 
     public static final int NUM_FEATURES = NUM_TERRITORIES * NUM_FEATURES_PER_TERRITORY + 1;
 
+    private final MyActionRewardFunction rewardFunction;
+
     public MyStateSensorArray(final int agentId) {
         super(agentId);
+        this.rewardFunction = new MyActionRewardFunction(agentId);
     }
 
     public Matrix getSensorValues(final GameView state) {
@@ -111,7 +115,7 @@ public class MyStateSensorArray
             broadcast(result, i, result.get(0, i));
         }
 
-        result.set(0, NUM_FEATURES - 1, getStateReward(state));
+        result.set(0, NUM_FEATURES - 1, rewardFunction.getStateReward(state));
 
         return result;
     }
@@ -131,13 +135,4 @@ public class MyStateSensorArray
             result.set(0, i, value);
         }
     }
-
-    private double getStateReward(final GameView state) {
-        double armyDifference = 0;
-        for (TerritoryOwnerView view : state.getTerritoryOwners()) {
-            armyDifference += Math.pow(view.getArmies(), 1.2) * (view.getOwner() == this.getAgentId() ? 1 : -1);
-        }
-        return Math.max(-1000, Math.min(1000, armyDifference));
-    }
-
 }
