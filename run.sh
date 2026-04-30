@@ -16,4 +16,4 @@ javac -cp "./lib/*:src" @risk.srcs || {
 }
 
 # Train
-java -ea -cp "./lib/*:src" edu.bu.pas.risk.SequentialTrain pas.risk.agent.RiskQAgent pas.risk.agent.HeuristicAgent -x 100 -g .99 -t 100 -v 10 -c 10000000000000000 2>&1
+java -ea -cp "./lib/*:src" edu.bu.pas.risk.SequentialTrain pas.risk.agent.RiskQAgent pas.risk.agent.HeuristicAgent -x 100 -g .99 -t 100 -v 0 --actionBatchSize 16 --placementBatchSize 16
