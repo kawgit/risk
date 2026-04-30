@@ -91,11 +91,7 @@ public class RiskQAgent
 
         // state encoder
         Sequential encoder = new Sequential();
-        encoder.add(new HackyTerritoryLinear(MyStateSensorArray.NUM_FEATURES_PER_TERRITORY, hiddenTerritoryDim));
-        encoder.add(new HackyTerritoryRMSNorm());
-        encoder.add(new HackyPassThroughReLU());
-        encoder.add(new HackyKipfWellingGCN(hiddenTerritoryDim, hiddenTerritoryDim));
-        encoder.add(new HackyTerritoryRMSNorm());
+        encoder.add(new HackyKipfWellingGCN(MyStateSensorArray.NUM_FEATURES_PER_TERRITORY, hiddenTerritoryDim));
         encoder.add(new HackyPassThroughReLU());
 
         // action decoder
@@ -103,14 +99,8 @@ public class RiskQAgent
         actionDecoder.add(new HackyTerritoryConcat(
                 hiddenTerritoryDim,
                 MyActionSensorArray.NUM_FEATURES_PER_TERRITORY));
-        actionDecoder.add(new HackyTerritoryLinear(
-                hiddenTerritoryDim + MyActionSensorArray.NUM_FEATURES_PER_TERRITORY,
+        actionDecoder.add(new HackyKipfWellingGCN(hiddenTerritoryDim + MyActionSensorArray.NUM_FEATURES_PER_TERRITORY,
                 hiddenTerritoryDim));
-        actionDecoder.add(new HackyTerritoryRMSNorm());
-        actionDecoder.add(new HackyPassThroughReLU());
-        actionDecoder.add(new HackyKipfWellingGCN(hiddenTerritoryDim, hiddenTerritoryDim));
-        actionDecoder.add(new HackyTerritoryRMSNorm());
-        actionDecoder.add(new HackyPassThroughReLU());
         actionDecoder.add(new HackyReduceSum(hiddenTerritoryDim));
         actionDecoder.add(new HackyRMSNorm());
         actionDecoder.add(new Dense(hiddenTerritoryDim + 1, hiddenTerritoryDim));
@@ -122,14 +112,8 @@ public class RiskQAgent
         placementDecoder.add(new HackyTerritoryConcat(
                 hiddenTerritoryDim,
                 MyPlacementSensorArray.NUM_FEATURES_PER_TERRITORY));
-        placementDecoder.add(new HackyTerritoryLinear(
-                hiddenTerritoryDim + MyPlacementSensorArray.NUM_FEATURES_PER_TERRITORY,
-                hiddenTerritoryDim));
-        placementDecoder.add(new HackyTerritoryRMSNorm());
-        placementDecoder.add(new HackyPassThroughReLU());
-        placementDecoder.add(new HackyKipfWellingGCN(hiddenTerritoryDim, hiddenTerritoryDim));
-        placementDecoder.add(new HackyTerritoryRMSNorm());
-        placementDecoder.add(new HackyPassThroughReLU());
+        placementDecoder.add(new HackyKipfWellingGCN(
+                hiddenTerritoryDim + MyPlacementSensorArray.NUM_FEATURES_PER_TERRITORY, hiddenTerritoryDim));
         placementDecoder.add(new HackyReduceSum(hiddenTerritoryDim));
         placementDecoder.add(new HackyRMSNorm());
         placementDecoder.add(new Dense(hiddenTerritoryDim + 1, hiddenTerritoryDim));
@@ -512,7 +496,7 @@ public class RiskQAgent
             final boolean isDuringSetup,
             final int remainingArmies) {
         // System.out.println("getExplorationPlacement");
-        final double temperature = 5.0;
+        final double temperature = 8.0;
         List<Territory> options = this.getPotentialPlacements(game, isDuringSetup, remainingArmies);
         if (Math.random() < FILTER_FOR_BIASED_CHANCE) {
             options = filterTopPBasedOnBias(game, options, MyPlacementSensorArray::getBias, temperature);
