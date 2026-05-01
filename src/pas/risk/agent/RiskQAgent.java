@@ -76,41 +76,9 @@ public class RiskQAgent
      *         networks you make here.
      */
     public DualDecoderModel initModel() {
-        // default model..you will likely want to change this
-
-        // lookup how many features each item has
-        final int numStateFeatures = MyStateSensorArray.NUM_FEATURES;
-        final int numActionFeatures = MyActionSensorArray.NUM_FEATURES;
-        final int numPlacementFeatures = MyPlacementSensorArray.NUM_FEATURES;
-
-        // build the encoder...it is a sequential neural network that (eventually)
-        // converts
-        // a state feature vector into a state encoding (with the size specified below)
-        final int stateEncodingDim = 64;
         Sequential encoder = new Sequential();
-        encoder.add(new Dense(numStateFeatures, 128));
-        encoder.add(new Tanh());
-        encoder.add(new Dense(128, stateEncodingDim));
-
-        // build the action decoder...also a sequential model whose input vector has
-        // size
-        // (stateEncodingDim + numActionFeatures) that (eventually) produces a single
-        // q-value
-        final int actionDecoderInputDim = stateEncodingDim + numActionFeatures;
         Sequential actionDecoder = new Sequential();
-        actionDecoder.add(new Dense(actionDecoderInputDim, 32));
-        actionDecoder.add(new Sigmoid());
-        actionDecoder.add(new Dense(32, 1));
-
-        // build the placement decoder...also a sequential model whose input vector has
-        // size
-        // (stateEncodingDim + numPlacementFeatures) that (eventually) produces a single
-        // q-value
-        final int placementDecoderInputDim = stateEncodingDim + numPlacementFeatures;
         Sequential placementDecoder = new Sequential();
-        placementDecoder.add(new Dense(placementDecoderInputDim, 32));
-        placementDecoder.add(new Sigmoid());
-        placementDecoder.add(new Dense(32, 1));
 
         return new DualDecoderModel(encoder, actionDecoder, placementDecoder);
     }
@@ -185,7 +153,8 @@ public class RiskQAgent
     public Action getExplorationRedeemAction(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        final List<Action> options = this.getRedeemActions(game, actionCounter, canRedeemCards, true);
+        final List<Action> options = this.getRedeemActions(game, actionCounter, canRedeemCards,
+                game.getAgentInventory(this.agentId()).size() < 5);
         return chooseRandom(options, new Random());
     }
 
@@ -205,7 +174,7 @@ public class RiskQAgent
     public boolean shouldExploreRedeemMovePhase(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        return (new Random()).nextBoolean();
+        return false;
     }
 
     /**
@@ -244,7 +213,7 @@ public class RiskQAgent
     public boolean shouldExploreAttackRedeemIfForcedMovePhase(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        return (new Random()).nextBoolean();
+        return false;
     }
 
     /**
@@ -282,7 +251,7 @@ public class RiskQAgent
     public boolean shouldExploreFortifySkipMovePhase(final GameView game,
             final int actionCounter,
             final boolean canRedeemCards) {
-        return (new Random()).nextBoolean();
+        return false;
     }
 
     /**
@@ -323,7 +292,7 @@ public class RiskQAgent
     public boolean shouldExplorePlacementPhase(final GameView game,
             final boolean isDuringSetup,
             final int remainingArmies) {
-        return (new Random()).nextBoolean();
+        return false;
     }
 
 }

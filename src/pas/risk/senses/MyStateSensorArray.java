@@ -14,7 +14,7 @@ import edu.bu.pas.risk.agent.senses.StateSensorArray;
  */
 public class MyStateSensorArray
         extends StateSensorArray {
-    public static final int NUM_FEATURES = 1;
+    public static final int NUM_FEATURES = 0;
 
     public MyStateSensorArray(final int agentId) {
         super(agentId);
