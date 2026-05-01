@@ -36,11 +36,11 @@ public class MyActionRewardFunction
     }
 
     public double getLowerBound() {
-        return 0.0;
+        return -10000.0;
     }
 
     public double getUpperBound() {
-        return 100.0;
+        return 10000.0;
     }
 
     /** {@inheritDoc} */
