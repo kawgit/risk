@@ -49,7 +49,7 @@ public class MyPlacementSensorArray
             for (Territory neighbor : territory.adjacentTerritories()) {
                 TerritoryOwnerView neighborOwnerView = state.getTerritoryOwners().get(neighbor);
                 if (neighborOwnerView.isUnclaimed()) {
-                    result -= 0.1;
+                    result -= 0.3;
                 } else if (neighborOwnerView.getOwner() != this.getAgentId()) {
                     result -= 1;
                 }
@@ -74,7 +74,9 @@ public class MyPlacementSensorArray
             result -= territoryOwnersView.getArmies() / 10.0;
 
         } else if (phase.equals("PLAYING")) {
-
+            if (territory.continent().id() == 5) {
+                result += 1;
+            }
         }
 
         Matrix resultMatrix = Matrix.zeros(1, 1);

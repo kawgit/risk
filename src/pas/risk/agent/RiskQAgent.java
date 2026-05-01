@@ -295,4 +295,35 @@ public class RiskQAgent
         return false;
     }
 
+    private static int lastPrintedTurn = -1;
+    private int numGames = 0;
+    private int numWins = 0;
+    private int numTurns = 0;
+
+    @Override
+    public void onTurnEnd(GameView game, int agentIdx) {
+        super.onTurnEnd(game, agentIdx);
+
+        int currentTurn = game.getNumTurns();
+        if (currentTurn != lastPrintedTurn) {
+            lastPrintedTurn = currentTurn;
+
+            if (game.isOver()) {
+                numGames++;
+                if (!game.getTerritoriesOwnedBy(this.agentId()).isEmpty()) {
+                    System.out.println("WIN");
+                    numWins++;
+                } else {
+                    System.out.println("LOSS");
+                }
+                numTurns += game.getNumTurns();
+
+                System.out.println("Over " + numGames + " games:");
+                System.out.println("  Win Rate: " + (double) numWins / numGames);
+                System.out.println("  Avg Length: " + (double) numTurns / numGames);
+                System.out.println();
+            }
+        }
+
+    }
 }
