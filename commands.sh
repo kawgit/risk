@@ -1,1 +1,0 @@
-java -cp "./lib/*:./src:." edu.bu.pas.risk.SequentialTrain -x 10 pas.risk.agent.RiskQAgent random | tee log.txt
